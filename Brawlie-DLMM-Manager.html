@@ -1,0 +1,3728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LP Position Manager</title>
+  <style>
+    :root {
+      --background: #0c0816;
+      --card-bg: #14102a;
+      --primary: #9945FF;
+      --secondary: #14F195;
+      --accent: #00C2FF;
+      --text: #ffffff;
+      --text-secondary: #c4c4c4;
+      --border: #2d2859;
+      --success: #14F195;
+      --danger: #FC8181;
+      --warning: #F2C94C;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--background);
+      background-image: radial-gradient(circle at top right, rgba(153, 69, 255, 0.1), transparent 40%), 
+                        radial-gradient(circle at bottom left, rgba(20, 241, 149, 0.1), transparent 40%);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 0;
+      margin: 0;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .header {
+      padding: 25px 0;
+      text-align: center;
+      margin-bottom: 30px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .header h1 {
+      color: var(--text);
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      background: linear-gradient(to right, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
+    }
+    
+    .header p {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+    
+    h2, h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: var(--text);
+    }
+    
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+      padding: 25px;
+      margin-bottom: 25px;
+      border: 1px solid var(--border);
+    }
+    
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      margin: 0 -12px 20px;
+    }
+    
+    .form-group {
+      flex: 1;
+      min-width: 200px;
+      padding: 0 12px;
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    
+    input, select, textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 16px;
+      background-color: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+    
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(153, 69, 255, 0.3);
+    }
+    
+    button {
+      background: linear-gradient(to right, var(--primary), var(--accent));
+      color: white;
+      border: none;
+      padding: 14px 25px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: transform 0.2s, opacity 0.2s;
+      display: inline-block;
+    }
+    
+    button:hover {
+      opacity: 0.9;
+      transform: translateY(-2px);
+    }
+    
+    button:active {
+      transform: translateY(0);
+    }
+    
+    .management-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    #clear-all-data-btn {
+      background: linear-gradient(to right, var(--danger), #ff6b6b);
+    }
+    
+    .results-container {
+      margin-top: 30px;
+    }
+    
+    .tab-buttons {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .tab-button {
+      background: none;
+      border: none;
+      padding: 12px 25px;
+      cursor: pointer;
+      color: var(--text-secondary);
+      font-weight: 500;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+    
+    .tab-button:hover {
+      color: var(--text);
+      opacity: 1;
+      transform: none;
+    }
+    
+    .tab-button.active {
+      color: var(--secondary);
+      border-bottom: 2px solid var(--secondary);
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .action-item {
+      padding: 18px;
+      border-left: 4px solid var(--primary);
+      background-color: rgba(153, 69, 255, 0.05);
+      margin-bottom: 15px;
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .action-item.sell {
+      border-left-color: var(--danger);
+      background-color: rgba(252, 129, 129, 0.05);
+    }
+    
+    .action-item.buy {
+      border-left-color: var(--success);
+      background-color: rgba(20, 241, 149, 0.05);
+    }
+    
+    .action-item.claim {
+      border-left-color: var(--warning);
+      background-color: rgba(242, 201, 76, 0.05);
+    }
+    
+    .action-item.remove-liquidity {
+      border-left-color: var(--danger);
+      background-color: rgba(252, 129, 129, 0.05);
+    }
+    
+    .action-item.add-liquidity {
+      border-left-color: var(--success);
+      background-color: rgba(20, 241, 149, 0.05);
+    }
+    
+    .action-item.warning {
+      border-left-color: var(--warning);
+      background-color: rgba(242, 201, 76, 0.05);
+    }
+    
+    .action-item.cross-position {
+      border-left-color: var(--accent);
+      background-color: rgba(0, 194, 255, 0.05);
+    }
+    
+    .action-item h4 {
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+    
+    .action-item p {
+      margin: 5px 0;
+      color: var(--text-secondary);
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+      background-color: rgba(255, 255, 255, 0.02);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    
+    th, td {
+      padding: 15px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      font-weight: 600;
+      color: var(--text);
+    }
+    
+    tr:hover {
+      background-color: rgba(255, 255, 255, 0.03);
+    }
+    
+    .metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .metric-card {
+      flex: 1;
+      min-width: 200px;
+      background-color: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+      padding: 20px;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+    
+    .metric-value {
+      font-size: 28px;
+      font-weight: 700;
+      margin: 15px 0;
+    }
+    
+    .metric-label {
+      font-size: 14px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .positive {
+      color: var(--success);
+    }
+    
+    .negative {
+      color: var(--danger);
+    }
+    
+    .neutral, .warning {
+      color: var(--warning);
+    }
+    
+    .notification {
+      padding: 15px;
+      background-color: rgba(0, 194, 255, 0.1);
+      border-left: 4px solid var(--accent);
+      margin-bottom: 20px;
+      border-radius: 0 8px 8px 0;
+    }
+    
+    .position-status {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    
+    .status-in-range {
+      background-color: var(--success);
+    }
+    
+    .status-warning {
+      background-color: var(--warning);
+    }
+    
+    .status-out-of-range {
+      background-color: var(--danger);
+    }
+    
+    .position-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .position-item {
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 15px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 150px;
+      text-align: center;
+      transition: all 0.2s;
+      position: relative;
+    }
+    
+    .position-item:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .position-item.active {
+      border-color: var(--primary);
+      background-color: rgba(153, 69, 255, 0.1);
+    }
+    
+    .position-name {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .position-value {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .position-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    
+    .position-actions button {
+      padding: 10px 15px;
+    }
+    
+    #add-position-btn {
+      background: linear-gradient(to right, var(--success), var(--primary));
+    }
+    
+    #close-position-btn, #delete-position-btn {
+      background: linear-gradient(to right, var(--danger), var(--primary));
+    }
+    
+    #view-closed-positions-btn {
+      background: linear-gradient(to right, var(--warning), var(--primary));
+    }
+    
+    .global-metrics {
+      background-color: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      border: 1px solid var(--border);
+    }
+    
+    .global-metrics h3 {
+      margin-top: 0;
+      margin-bottom: 15px;
+      color: var(--accent);
+    }
+    
+    .cross-position-opportunities {
+      margin-top: 30px;
+    }
+    
+    .pnl-section {
+      margin-top: 20px;
+    }
+    
+    .pnl-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .pnl-card {
+      flex: 1;
+      min-width: 220px;
+      background-color: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid var(--border);
+    }
+    
+    .pnl-title {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .pnl-value {
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .timeframe-selector {
+      display: flex;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 15px;
+      border: 1px solid var(--border);
+    }
+    
+    .timeframe-btn {
+      padding: 8px 15px;
+      border: none;
+      background: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .timeframe-btn:hover {
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+    
+    .timeframe-btn.active {
+      background-color: rgba(153, 69, 255, 0.2);
+      color: var(--text);
+    }
+    
+    .filter-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .filter-option {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .chart-container {
+      height: 250px;
+      width: 100%;
+      margin: 20px 0;
+      position: relative;
+    }
+    
+    .file-buttons {
+      margin-top: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    
+    .file-btn {
+      background: linear-gradient(to right, var(--accent), var(--primary));
+    }
+    
+    .help-icon {
+      display: inline-block;
+      width: 18px;
+      height: 18px;
+      background-color: var(--primary);
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 18px;
+      font-size: 12px;
+      margin-left: 5px;
+      cursor: help;
+    }
+    
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .tooltip .tooltip-text {
+      visibility: hidden;
+      width: 200px;
+      background-color: var(--card-bg);
+      color: var(--text);
+      text-align: center;
+      border-radius: 6px;
+      padding: 10px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-weight: normal;
+      font-size: 14px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--border);
+    }
+    
+    .tooltip:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    .fee-log {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+    
+    .fee-log-header {
+      background-color: rgba(255, 255, 255, 0.05);
+      padding: 15px;
+      border-bottom: 1px solid var(--border);
+      font-weight: 600;
+    }
+    
+    .fee-log-body {
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .fee-log-entry {
+      padding: 12px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .fee-log-entry:last-child {
+      border-bottom: none;
+    }
+    
+    .fee-date {
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+    
+    .fee-details {
+      display: flex;
+      justify-content: space-between;
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+    
+    .range-indicator {
+      width: 100%;
+      height: 30px;
+      background-color: rgba(255, 255, 255, 0.05);
+      border-radius: 15px;
+      position: relative;
+      overflow: hidden;
+      margin: 20px 0;
+    }
+    
+    .range-bar {
+      height: 100%;
+      background: linear-gradient(to right, var(--primary), var(--accent));
+      border-radius: 15px;
+      position: relative;
+    }
+    
+    .price-marker {
+      position: absolute;
+      top: -15px;
+      width: 2px;
+      height: 60px;
+      background-color: var(--warning);
+    }
+    
+    .price-marker:after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: -4px;
+      width: 10px;
+      height: 10px;
+      background-color: var(--warning);
+      border-radius: 50%;
+    }
+    
+    .form-section {
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .form-section:last-child {
+      border-bottom: none;
+    }
+    
+    .form-section-title {
+      margin-bottom: 15px;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    
+    .tabs-container {
+      margin-top: 20px;
+    }
+    
+    .tab-nav {
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    
+    .tab-nav-item {
+      padding: 10px 20px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    
+    .tab-nav-item:hover {
+      color: var(--text);
+    }
+    
+    .tab-nav-item.active {
+      color: var(--primary);
+      border-bottom: 2px solid var(--primary);
+    }
+    
+    .tab-panel {
+      display: none;
+    }
+    
+    .tab-panel.active {
+      display: block;
+    }
+    
+    .fee-action-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    
+    .fee-action-btn {
+      background-color: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      cursor: pointer;
+      flex: 1;
+      min-width: 150px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    
+    .fee-action-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    
+    .fee-action-btn.active {
+      border-color: var(--primary);
+      background-color: rgba(153, 69, 255, 0.1);
+    }
+    
+    .closed-position-badge {
+      display: inline-block;
+      background-color: var(--danger);
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 8px;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      padding: 20px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+    
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0;
+    }
+    
+    .action-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    /* Responsive styles */
+    @media (max-width: 768px) {
+      .form-group {
+        min-width: 100%;
+      }
+      
+      .metrics {
+        flex-direction: column;
+      }
+      
+      .position-actions {
+        flex-direction: column;
+      }
+      
+      .position-actions button {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="container">
+      <h1>LP Position Manager</h1>
+      <p>Optimize your liquidity positions across multiple pairs</p>
+    </div>
+  </div>
+  
+  <div class="container">
+    <div class="notification">
+      <p><strong>Local Tool:</strong> Save this file to your computer and open it in any browser. All calculations happen locally. Your data is stored in your browser's local storage.</p>
+    </div>
+    
+    <!-- Management buttons including Clear All Data -->
+    <div class="management-buttons">
+      <button id="export-btn" class="file-btn">Export Data</button>
+      <button id="import-btn" class="file-btn">Import Data</button>
+      <button id="clear-all-data-btn">Clear All Data</button>
+      <input type="file" id="file-input" accept=".json" style="display: none;">
+    </div>
+    
+    <!-- Global Portfolio Overview -->
+    <div class="card">
+      <h2>Portfolio Overview</h2>
+      
+      <div class="global-metrics">
+        <h3>Total Portfolio Value</h3>
+        <div class="metrics">
+          <div class="metric-card">
+            <div class="metric-label">Total LP Value</div>
+            <div class="metric-value" id="total-lp-value">$0.00</div>
+            <small style="color: var(--text-secondary);">Combined value of all positions</small>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total Reserve Value</div>
+            <div class="metric-value" id="total-reserve-value">$0.00</div>
+            <small style="color: var(--text-secondary);">Value of all held tokens</small>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Unclaimed Fees</div>
+            <div class="metric-value positive" id="total-fees-value">$0.00</div>
+            <small style="color: var(--text-secondary);">Across all positions</small>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Daily Earnings</div>
+            <div class="metric-value" id="daily-earnings">$0.00</div>
+            <small style="color: var(--text-secondary);">Estimated daily earnings</small>
+          </div>
+        </div>
+        
+        <h3>Token Exposure</h3>
+        <table id="token-exposure-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Total Value</th>
+              <th>% of Portfolio</th>
+              <th>In LP Positions</th>
+              <th>In Reserve</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Will be populated dynamically -->
+          </tbody>
+        </table>
+      </div>
+      
+      <!-- PnL Analysis Section -->
+      <div class="pnl-section">
+        <h3>Portfolio Performance</h3>
+        
+        <div class="timeframe-selector">
+          <button class="timeframe-btn active" data-timeframe="1d">1D</button>
+          <button class="timeframe-btn" data-timeframe="1w">1W</button>
+          <button class="timeframe-btn" data-timeframe="30d">30D</button>
+          <button class="timeframe-btn" data-timeframe="1y">1Y</button>
+          <button class="timeframe-btn" data-timeframe="all">All Time</button>
+        </div>
+        
+        <div class="filter-options">
+          <div class="filter-option">
+            <input type="checkbox" id="show-overall" checked>
+            <label for="show-overall">Overall PnL</label>
+          </div>
+          <div class="filter-option">
+            <input type="checkbox" id="show-fees" checked>
+            <label for="show-fees">Fees Earned</label>
+          </div>
+          <div class="filter-option">
+            <input type="checkbox" id="show-asset-value" checked>
+            <label for="show-asset-value">Asset Value</label>
+          </div>
+        </div>
+        
+        <div class="pnl-metrics">
+          <div class="pnl-card">
+            <div class="pnl-title">Overall PnL</div>
+            <div class="pnl-value" id="overall-pnl">$0.00 (0.00%)</div>
+          </div>
+          <div class="pnl-card">
+            <div class="pnl-title">Fees Earned</div>
+            <div class="pnl-value positive" id="fees-earned">$0.00</div>
+          </div>
+          <div class="pnl-card">
+            <div class="pnl-title">Asset Value Change</div>
+            <div class="pnl-value" id="asset-value-change">$0.00 (0.00%)</div>
+          </div>
+          <div class="pnl-card">
+            <div class="pnl-title">Initial Value</div>
+            <div class="pnl-value" id="initial-value">$0.00</div>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <canvas id="pnl-chart"></canvas>
+        </div>
+      </div>
+      
+      <!-- Position List -->
+      <h3>Your LP Positions</h3>
+      <div class="position-list" id="position-list">
+        <!-- Will be populated with position items -->
+      </div>
+      
+      <div class="position-actions">
+        <button id="add-position-btn">Add New Position</button>
+        <button id="update-position-btn">Update Selected Position</button>
+        <button id="close-position-btn">Close Selected Position</button>
+        <button id="delete-position-btn">Delete Selected Position</button>
+        <button id="view-closed-positions-btn">View Closed Positions</button>
+      </div>
+    </div>
+    
+    <!-- Position Details Form - Restructured with tabs -->
+    <div class="card" id="position-details-card">
+      <h2>Position Details: <span id="current-position-name">No Position Selected</span></h2>
+      
+      <div class="tabs-container">
+        <div class="tab-nav">
+          <button class="tab-nav-item active" data-tab="add-update-tab">Add/Update Position</button>
+          <button class="tab-nav-item" data-tab="fee-management-tab">Fee Management</button>
+          <button class="tab-nav-item" data-tab="history-tab">Position History</button>
+        </div>
+        
+        <div class="tab-panel active" id="add-update-tab">
+          <div class="position-form-wrapper">
+            <div class="form-section">
+              <div class="form-section-title">Basic Information</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="position-name">Position Name</label>
+                  <input type="text" id="position-name" placeholder="E.g., JUP-USDC LP">
+                </div>
+                <div class="form-group">
+                  <label for="position-date">Position Date</label>
+                  <input type="date" id="position-date">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="token-a">Token A</label>
+                  <input type="text" id="token-a" placeholder="JUP, SOL, etc." value="JUP">
+                </div>
+                <div class="form-group">
+                  <label for="token-b">Token B</label>
+                  <input type="text" id="token-b" placeholder="USDC, SOL, etc." value="USDC">
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-section">
+              <div class="form-section-title">Token Prices & LP Range</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="token-a-price">Token A Price (in USD)
+                    <span class="tooltip">
+                      <span class="help-icon">?</span>
+                      <span class="tooltip-text">The current price of Token A in USD. Example: If JUP is worth $2.50, enter 2.5</span>
+                    </span>
+                  </label>
+                  <input type="number" id="token-a-price" placeholder="Token A price in USD" step="0.000001" value="2.50">
+                </div>
+                <div class="form-group">
+                  <label for="token-b-price">Token B Price (in USD)
+                    <span class="tooltip">
+                      <span class="help-icon">?</span>
+                      <span class="tooltip-text">The current price of Token B in USD. Example: If USDC is worth $1.00, enter 1.0</span>
+                    </span>
+                  </label>
+                  <input type="number" id="token-b-price" placeholder="Token B price in USD" step="0.000001" value="1.00">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="position-status">Position Status</label>
+                  <select id="position-status">
+                    <option value="in_range">In Range</option>
+                    <option value="out_range_recent">Out of Range (< 24 hours)</option>
+                    <option value="out_range_extended">Out of Range (> 24 hours)</option>
+                    <option value="near_boundary">In Range (Near Boundary)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="price-ratio-display">Current Price Ratio
+                    <span class="tooltip">
+                      <span class="help-icon">?</span>
+                      <span class="tooltip-text">The calculated price ratio between Token A and Token B (automatically computed from the individual prices)</span>
+                    </span>
+                  </label>
+                  <input type="text" id="price-ratio-display" readonly style="background-color: rgba(255,255,255,0.02);">
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="lower-ratio">LP Lower Bound (Price Ratio)
+                    <span class="tooltip">
+                      <span class="help-icon">?</span>
+                      <span class="tooltip-text">The minimum price ratio where your position provides liquidity. For JUP/USDC, if the minimum is 1 JUP = 2.0 USDC, enter 2.0</span>
+                    </span>
+                  </label>
+                  <input type="number" id="lower-ratio" placeholder="Lower bound of LP range" step="0.000001" value="2.00">
+                </div>
+                <div class="form-group">
+                  <label for="upper-ratio">LP Upper Bound (Price Ratio)
+                    <span class="tooltip">
+                      <span class="help-icon">?</span>
+                      <span class="tooltip-text">The maximum price ratio where your position provides liquidity. For JUP/USDC, if the maximum is 1 JUP = 3.0 USDC, enter 3.0</span>
+                    </span>
+                  </label>
+                  <input type="number" id="upper-ratio" placeholder="Upper bound of LP range" step="0.000001" value="3.00">
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-section">
+              <div class="form-section-title">Current Holdings</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="token-a-lp">Token A in LP (token amount)</label>
+                  <input type="number" id="token-a-lp" placeholder="Number of tokens in LP" step="0.000001" value="100">
+                  <small style="color: var(--text-secondary);">Quantity of Token A in the liquidity position</small>
+                </div>
+                <div class="form-group">
+                  <label for="token-b-lp">Token B in LP (token amount)</label>
+                  <input type="number" id="token-b-lp" placeholder="Number of tokens in LP" step="0.000001" value="250">
+                  <small style="color: var(--text-secondary);">Quantity of Token B in the liquidity position</small>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="token-a-reserve">Token A in Reserve/Wallet (token amount)</label>
+                  <input type="number" id="token-a-reserve" placeholder="Number of tokens held outside LP" step="0.000001" value="25">
+                  <small style="color: var(--text-secondary);">Quantity of Token A held outside the LP</small>
+                </div>
+                <div class="form-group">
+                  <label for="token-b-reserve">Token B in Reserve/Wallet (token amount)</label>
+                  <input type="number" id="token-b-reserve" placeholder="Number of tokens held outside LP" step="0.000001" value="75">
+                  <small style="color: var(--text-secondary);">Quantity of Token B held outside the LP</small>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="fee-apr">Current Daily Fee Rate (% of position value)</label>
+                  <input type="number" id="fee-apr" placeholder="Average daily fee as percentage" step="0.01" value="0.5">
+                  <small style="color: var(--text-secondary);">Daily fees as % of total position value</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="form-section">
+              <div class="form-section-title">Unclaimed Fees</div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="accumulated-fees-a">Unclaimed Token A Fees (token amount)</label>
+                  <input type="number" id="accumulated-fees-a" placeholder="Amount of Token A fees" step="0.000001" value="0.5">
+                  <small style="color: var(--text-secondary);">Quantity of Token A earned as fees but not yet claimed</small>
+                </div>
+                <div class="form-group">
+                  <label for="accumulated-fees-b">Unclaimed Token B Fees (token amount)</label>
+                  <input type="number" id="accumulated-fees-b" placeholder="Amount of Token B fees" step="0.000001" value="2.25">
+                  <small style="color: var(--text-secondary);">Quantity of Token B earned as fees but not yet claimed</small>
+                </div>
+              </div>
+            </div>
+            
+            <div class="action-buttons">
+              <button id="save-position-btn">Save Position</button>
+              <button id="calculate-btn">Calculate Strategy</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="tab-panel" id="fee-management-tab">
+          <div class="form-section">
+            <div class="form-section-title">Fee Management Options</div>
+            <div class="fee-action-options">
+              <div class="fee-action-btn" data-action="claim">Claim Fees to Wallet</div>
+              <div class="fee-action-btn" data-action="compound">Compound Fees to LP</div>
+              <div class="fee-action-btn" data-action="swap">Swap Fee Tokens</div>
+            </div>
+            
+            <div id="claim-fees-form" class="fee-action-form" style="display: none;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="claim-date">Claim Date</label>
+                  <input type="date" id="claim-date">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="claim-amount-a">Token A Amount to Claim</label>
+                  <input type="number" id="claim-amount-a" placeholder="Amount of Token A" step="0.000001">
+                </div>
+                <div class="form-group">
+                  <label for="claim-amount-b">Token B Amount to Claim</label>
+                  <input type="number" id="claim-amount-b" placeholder="Amount of Token B" step="0.000001">
+                </div>
+              </div>
+              <button id="save-claim-btn">Save Claim</button>
+            </div>
+            
+            <div id="compound-fees-form" class="fee-action-form" style="display: none;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="compound-date">Compound Date</label>
+                  <input type="date" id="compound-date">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="compound-amount-a">Token A Amount to Compound</label>
+                  <input type="number" id="compound-amount-a" placeholder="Amount of Token A" step="0.000001">
+                </div>
+                <div class="form-group">
+                  <label for="compound-amount-b">Token B Amount to Compound</label>
+                  <input type="number" id="compound-amount-b" placeholder="Amount of Token B" step="0.000001">
+                </div>
+              </div>
+              <button id="save-compound-btn">Save Compound</button>
+            </div>
+            
+            <div id="swap-fees-form" class="fee-action-form" style="display: none;">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="swap-date">Swap Date</label>
+                  <input type="date" id="swap-date">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="swap-from-token">From Token</label>
+                  <select id="swap-from-token">
+                    <option value="tokenA">Token A</option>
+                    <option value="tokenB">Token B</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="swap-amount">Amount to Swap</label>
+                  <input type="number" id="swap-amount" placeholder="Amount to swap" step="0.000001">
+                </div>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="swap-to-token">To Token</label>
+                  <select id="swap-to-token">
+                    <option value="tokenA">Token A</option>
+                    <option value="tokenB">Token B</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="swap-received-amount">Amount Received</label>
+                  <input type="number" id="swap-received-amount" placeholder="Amount received" step="0.000001">
+                </div>
+              </div>
+              <button id="save-swap-btn">Save Swap</button>
+            </div>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-section-title">Fee Transaction History</div>
+            <div class="fee-log">
+              <div class="fee-log-header">Fee Transactions</div>
+              <div class="fee-log-body" id="fee-log">
+                <!-- Entries will be added here by JavaScript -->
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="tab-panel" id="history-tab">
+          <div class="form-section">
+            <div class="form-section-title">Add Position History Entry</div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="history-date">Date</label>
+                <input type="date" id="history-date">
+              </div>
+              <div class="form-group">
+                <label for="history-action">Action</label>
+                <select id="history-action">
+                  <option value="create">Created Position</option>
+                  <option value="add">Added Liquidity</option>
+                  <option value="remove">Removed Liquidity</option>
+                  <option value="rebalance">Rebalanced Position</option>
+                  <option value="adjust_range">Adjusted Range</option>
+                  <option value="claim">Claimed Fees</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="history-notes">Notes</label>
+                <textarea id="history-notes" placeholder="Details about the action taken..."></textarea>
+              </div>
+            </div>
+            <button id="add-history-btn">Add History Entry</button>
+          </div>
+          
+          <div class="form-section">
+            <div class="form-section-title">Position History Log</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Action</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="history-table">
+                <!-- History data will be added here -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Cross-Position Strategy Optimizer -->
+    <div class="card">
+      <h2>Cross-Position Strategy Optimizer</h2>
+      <div class="metrics">
+        <div class="metric-card">
+          <div class="metric-label">Overall Risk Rating</div>
+          <div class="metric-value" id="overall-risk-metric">--</div>
+          <small style="color: var(--text-secondary);">Based on IL risk across positions</small>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">LP vs. HODL</div>
+          <div class="metric-value" id="overall-lp-vs-hodl-metric">--</div>
+          <small style="color: var(--text-secondary);">Overall portfolio performance</small>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Portfolio Balance</div>
+          <div class="metric-value" id="portfolio-balance-metric">--</div>
+          <small style="color: var(--text-secondary);">Token distribution balance rating</small>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Projected Monthly Yield</div>
+          <div class="metric-value" id="projected-monthly-yield">--</div>
+          <small style="color: var(--text-secondary);">Estimated monthly earnings</small>
+        </div>
+      </div>
+      
+      <h3>Cross-Position Optimization Levers</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="optimization-goal">Portfolio Optimization Goal</label>
+          <select id="optimization-goal">
+            <option value="balanced">Balanced (Fees vs. IL Risk)</option>
+            <option value="max_fees">Maximize Fee Generation</option>
+            <option value="min_il">Minimize Impermanent Loss</option>
+            <option value="max_specific_token">Accumulate Specific Token</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="risk-tolerance">Portfolio Risk Tolerance</label>
+          <select id="risk-tolerance">
+            <option value="conservative">Conservative</option>
+            <option value="moderate" selected>Moderate</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </div>
+        <div class="form-group" id="target-token-container" style="display: none;">
+          <label for="target-token">Target Token to Accumulate</label>
+          <select id="target-token">
+            <!-- Will be populated with all tokens in portfolio -->
+          </select>
+        </div>
+      </div>
+      
+      <button id="optimize-portfolio-btn">Generate Cross-Position Strategy</button>
+      
+      <div class="cross-position-opportunities" id="cross-position-opportunities">
+        <!-- Will be populated with cross-position recommendations -->
+        <p>Run the optimizer to generate cross-position strategies</p>
+      </div>
+    </div>
+    
+    <!-- Results container for position analysis -->
+    <div class="results-container" id="results-container" style="display: none;">
+      <div class="tab-buttons">
+        <button class="tab-button active" data-tab="actions-tab">Recommended Actions</button>
+        <button class="tab-button" data-tab="analysis-tab">Position Analysis</button>
+      </div>
+      
+      <div class="card tab-content active" id="actions-tab">
+        <h2>Recommended Actions</h2>
+        
+        <div class="range-indicator" id="range-indicator">
+          <div class="range-bar" id="range-bar"></div>
+          <div class="price-marker" id="price-marker"></div>
+        </div>
+        
+        <div class="metrics">
+          <div class="metric-card">
+            <div class="metric-label">LP Position Value</div>
+            <div class="metric-value" id="lp-value-metric">$0.00</div>
+            <small style="color: var(--text-secondary);">Sum of both tokens in the LP</small>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Fee APR (Annualized)</div>
+            <div class="metric-value positive" id="fee-apr-metric">0%</div>
+            <small style="color: var(--text-secondary);">Daily fee % × 365</small>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Token Ratio in LP</div>
+            <div class="metric-value" id="token-ratio-metric">50:50</div>
+            <small style="color: var(--text-secondary);">Token A : Token B by value</small>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Unclaimed Fees</div>
+            <div class="metric-value positive" id="unclaimed-fees-metric">$0.00</div>
+            <small style="color: var(--text-secondary);">Total value of unclaimed fees</small>
+          </div>
+        </div>
+        
+        <div id="actions-list"></div>
+      </div>
+      
+      <div class="card tab-content" id="analysis-tab">
+        <h2>Position Analysis</h2>
+        
+        <h3>LP Composition</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Amount in LP</th>
+              <th>Value in LP</th>
+              <th>LP %</th>
+              <th>Reserve Amount</th>
+              <th>Total Value</th>
+            </tr>
+          </thead>
+          <tbody id="composition-table">
+            <!-- Table data will be populated by JavaScript -->
+          </tbody>
+        </table>
+        
+        <h3>Performance Metrics</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Value</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="metrics-table">
+            <!-- Table data will be populated by JavaScript -->
+          </tbody>
+        </table>
+        
+        <h3>Position Value History</h3>
+        <div class="chart-container">
+          <canvas id="position-chart"></canvas>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>LP Value</th>
+              <th>Total Value</th>
+              <th>Token Ratio</th>
+              <th>Fee APR</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="position-history-table">
+            <!-- Position history data will be populated by JavaScript -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Closed Positions Modal -->
+  <div id="closed-positions-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Closed Positions History</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      
+      <div id="closed-positions-list">
+        <!-- Will be populated with closed positions -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Confirmation Modal for Clear Data -->
+  <div id="confirm-clear-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Confirm Clear All Data</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      
+      <p style="margin-bottom: 20px;">Are you sure you want to delete all position data and history? This action cannot be undone.</p>
+      
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button id="cancel-clear-btn">Cancel</button>
+        <button id="confirm-clear-btn" style="background: linear-gradient(to right, var(--danger), #ff6b6b);">Yes, Clear All Data</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Global STATE object to store all data
+    const STATE = {
+      positions: [],              // Array of all LP positions
+      currentPositionIndex: -1,   // Currently selected position index
+      settings: {
+        timeframe: '1d',          // Default timeframe for PnL
+        showFilters: {
+          overall: true,
+          fees: true,
+          assetValue: true
+        }
+      },
+      
+      // Helper method to get current position
+      getCurrentPosition() {
+        if (this.currentPositionIndex >= 0 && this.currentPositionIndex < this.positions.length) {
+          return this.positions[this.currentPositionIndex];
+        }
+        return null;
+      },
+      
+      // Get a complete list of all tokens in the portfolio
+      getAllTokens() {
+        const tokenMap = new Map();
+        
+        // Filter out closed positions
+        const activePositions = this.positions.filter(position => !position.closed);
+        
+        activePositions.forEach(position => {
+          // Add tokenA
+          if (!tokenMap.has(position.tokenA)) {
+            tokenMap.set(position.tokenA, {
+              symbol: position.tokenA,
+              price: position.tokenAPrice,
+              lpAmount: 0,
+              reserveAmount: 0,
+              feesAmount: 0,
+              totalValue: 0
+            });
+          }
+          
+          // Add tokenB
+          if (!tokenMap.has(position.tokenB)) {
+            tokenMap.set(position.tokenB, {
+              symbol: position.tokenB,
+              price: position.tokenBPrice,
+              lpAmount: 0,
+              reserveAmount: 0,
+              feesAmount: 0,
+              totalValue: 0
+            });
+          }
+          
+          // Update token amounts and values
+          const tokenAInfo = tokenMap.get(position.tokenA);
+          tokenAInfo.lpAmount += position.tokenA_LP || 0;
+          tokenAInfo.reserveAmount += position.tokenA_Reserve || 0;
+          tokenAInfo.feesAmount += position.accumulatedFeesA || 0;
+          tokenAInfo.totalValue = (tokenAInfo.lpAmount + tokenAInfo.reserveAmount + tokenAInfo.feesAmount) * tokenAInfo.price;
+          
+          const tokenBInfo = tokenMap.get(position.tokenB);
+          tokenBInfo.lpAmount += position.tokenB_LP || 0;
+          tokenBInfo.reserveAmount += position.tokenB_Reserve || 0;
+          tokenBInfo.feesAmount += position.accumulatedFeesB || 0;
+          tokenBInfo.totalValue = (tokenBInfo.lpAmount + tokenBInfo.reserveAmount + tokenBInfo.feesAmount) * tokenBInfo.price;
+        });
+        
+        return Array.from(tokenMap.values());
+      },
+      
+      // Calculate total portfolio value
+      calculatePortfolioValue() {
+        let totalLPValue = 0;
+        let totalReserveValue = 0;
+        let totalFeesValue = 0;
+        let totalDailyEarnings = 0;
+        
+        // Filter out closed positions
+        const activePositions = this.positions.filter(position => !position.closed);
+        
+        activePositions.forEach(position => {
+          // Calculate values
+          const tokenA_LP_Value = (position.tokenA_LP || 0) * position.tokenAPrice;
+          const tokenB_LP_Value = (position.tokenB_LP || 0) * position.tokenBPrice;
+          const lpPositionValue = tokenA_LP_Value + tokenB_LP_Value;
+          
+          const tokenA_Reserve_Value = (position.tokenA_Reserve || 0) * position.tokenAPrice;
+          const tokenB_Reserve_Value = (position.tokenB_Reserve || 0) * position.tokenBPrice;
+          const reserveValue = tokenA_Reserve_Value + tokenB_Reserve_Value;
+          
+          const feesA_Value = (position.accumulatedFeesA || 0) * position.tokenAPrice;
+          const feesB_Value = (position.accumulatedFeesB || 0) * position.tokenBPrice;
+          const feesValue = feesA_Value + feesB_Value;
+          
+          const dailyEarnings = lpPositionValue * (position.feeAPRDaily || 0) / 100;
+          
+          // Add to totals
+          totalLPValue += lpPositionValue;
+          totalReserveValue += reserveValue;
+          totalFeesValue += feesValue;
+          totalDailyEarnings += dailyEarnings;
+        });
+        
+        return {
+          totalLPValue,
+          totalReserveValue,
+          totalFeesValue,
+          totalDailyEarnings,
+          totalValue: totalLPValue + totalReserveValue + totalFeesValue
+        };
+      },
+      
+      // Calculate PnL for a specific timeframe
+      calculatePnL(timeframe) {
+        // Build complete position history by combining snapshots
+        let initialValue = 0;
+        let currentValue = 0;
+        let feesEarned = 0;
+        let assetValueChange = 0;
+        
+        // Get the date cutoff based on timeframe
+        const now = new Date();
+        let cutoffDate = new Date();
+        
+        switch(timeframe) {
+          case '1d':
+            cutoffDate.setDate(now.getDate() - 1);
+            break;
+          case '1w':
+            cutoffDate.setDate(now.getDate() - 7);
+            break;
+          case '30d':
+            cutoffDate.setDate(now.getDate() - 30);
+            break;
+          case '1y':
+            cutoffDate.setFullYear(now.getFullYear() - 1);
+            break;
+          case 'all':
+            cutoffDate = new Date(0); // Beginning of time
+            break;
+        }
+        
+        // Filter out closed positions
+        const activePositions = this.positions.filter(position => !position.closed);
+        
+        // Get initial and current value from each position
+        activePositions.forEach(position => {
+          if (!position.positionData || position.positionData.length === 0) {
+            // If no history, use current values
+            const tokenA_LP_Value = (position.tokenA_LP || 0) * position.tokenAPrice;
+            const tokenB_LP_Value = (position.tokenB_LP || 0) * position.tokenBPrice;
+            const currentPositionValue = tokenA_LP_Value + tokenB_LP_Value;
+            
+            currentValue += currentPositionValue;
+            // Assume initial value is same as current if no history
+            initialValue += currentPositionValue;
+            return;
+          }
+          
+          // Sort by date (oldest first for finding initial value)
+          const sortedHistory = [...position.positionData].sort((a, b) => new Date(a.date) - new Date(b.date));
+          
+          // Find the earliest history entry after cutoff date
+          const initialEntry = sortedHistory.find(entry => new Date(entry.date) >= cutoffDate);
+          
+          if (initialEntry) {
+            initialValue += initialEntry.lpPositionValue;
+          } else if (sortedHistory.length > 0) {
+            // If no entry after cutoff, use the earliest one
+            initialValue += sortedHistory[0].lpPositionValue;
+          }
+          
+          // Get current value
+          const currentPositionValue = (position.tokenA_LP || 0) * position.tokenAPrice + (position.tokenB_LP || 0) * position.tokenBPrice;
+          currentValue += currentPositionValue;
+          
+          // Calculate fees earned in this period
+          let positionFeesEarned = 0;
+          
+          // Sum all fee transactions within the timeframe
+          if (position.transactionData && position.transactionData.length > 0) {
+            position.transactionData.forEach(tx => {
+              if (new Date(tx.date) >= cutoffDate) {
+                positionFeesEarned += tx.value || 0;
+              }
+            });
+          }
+          
+          // Add unclaimed fees
+          const unclaimedFees = (position.accumulatedFeesA || 0) * position.tokenAPrice + 
+                               (position.accumulatedFeesB || 0) * position.tokenBPrice;
+          
+          positionFeesEarned += unclaimedFees;
+          feesEarned += positionFeesEarned;
+          
+          // Asset value change is (current - initial - fees)
+          const positionAssetChange = currentPositionValue - (initialEntry?.lpPositionValue || currentPositionValue) - positionFeesEarned;
+          assetValueChange += positionAssetChange;
+        });
+        
+        // Calculate overall PnL
+        const overallPnL = currentValue - initialValue;
+        const overallPnLPercent = initialValue > 0 ? (overallPnL / initialValue * 100) : 0;
+        
+        const assetValueChangePercent = initialValue > 0 ? (assetValueChange / initialValue * 100) : 0;
+        
+        return {
+          initialValue,
+          currentValue,
+          overallPnL,
+          overallPnLPercent,
+          feesEarned,
+          assetValueChange,
+          assetValueChangePercent
+        };
+      }
+    };
+    
+    // Initialize event listeners and load data when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      // Set today's date as the default for date inputs
+      const todayString = new Date().toISOString().split('T')[0];
+      document.getElementById('position-date').value = todayString;
+      document.getElementById('history-date').value = todayString;
+      document.getElementById('claim-date').value = todayString;
+      document.getElementById('compound-date').value = todayString;
+      document.getElementById('swap-date').value = todayString;
+      
+      // Add event listeners
+      setupEventListeners();
+      
+      // Load data from localStorage
+      loadFromLocalStorage();
+      
+      // Initialize UI
+      updatePositionList();
+      updateGlobalMetrics();
+      updateTokenExposureTable();
+      updatePnLMetrics();
+      updateOptimizer();
+      
+      // Hide position details card if no position is selected
+      if (STATE.currentPositionIndex === -1) {
+        document.getElementById('position-details-card').style.display = 'none';
+        document.getElementById('results-container').style.display = 'none';
+      } else {
+        loadPositionDetails();
+      }
+      
+      // Calculate the initial price ratio
+      updatePriceRatio();
+    });
+    
+    // Set up all event listeners
+    function setupEventListeners() {
+      // Position management buttons
+      document.getElementById('add-position-btn').addEventListener('click', addNewPosition);
+      document.getElementById('update-position-btn').addEventListener('click', function() {
+        const position = STATE.getCurrentPosition();
+        if (!position) {
+          alert('No position selected to update.');
+          return;
+        }
+        document.getElementById('position-details-card').style.display = 'block';
+        document.querySelector('.tab-nav-item[data-tab="add-update-tab"]').click();
+      });
+      document.getElementById('save-position-btn').addEventListener('click', saveCurrentPosition);
+      document.getElementById('close-position-btn').addEventListener('click', closePosition);
+      document.getElementById('delete-position-btn').addEventListener('click', deletePosition);
+      document.getElementById('view-closed-positions-btn').addEventListener('click', showClosedPositionsHistory);
+      
+      // Clear all data
+      document.getElementById('clear-all-data-btn').addEventListener('click', showClearDataConfirmation);
+      document.getElementById('confirm-clear-btn').addEventListener('click', clearAllData);
+      document.getElementById('cancel-clear-btn').addEventListener('click', function() {
+        document.getElementById('confirm-clear-modal').style.display = 'none';
+      });
+      
+      // Fee management buttons
+      document.getElementById('save-claim-btn').addEventListener('click', saveFeesClaim);
+      document.getElementById('save-compound-btn').addEventListener('click', saveFeesCompound);
+      document.getElementById('save-swap-btn').addEventListener('click', saveFeesSwap);
+      
+      // Fee action option buttons
+      document.querySelectorAll('.fee-action-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          // Remove active class from all buttons
+          document.querySelectorAll('.fee-action-btn').forEach(b => b.classList.remove('active'));
+          
+          // Add active class to clicked button
+          this.classList.add('active');
+          
+          // Hide all forms
+          document.querySelectorAll('.fee-action-form').forEach(form => {
+            form.style.display = 'none';
+          });
+          
+          // Show the corresponding form
+          const action = this.getAttribute('data-action');
+          document.getElementById(`${action}-fees-form`).style.display = 'block';
+        });
+      });
+      
+      // Strategy buttons
+      document.getElementById('calculate-btn').addEventListener('click', calculateStrategy);
+      document.getElementById('optimize-portfolio-btn').addEventListener('click', optimizePortfolio);
+      
+      // History entry button
+      document.getElementById('add-history-btn').addEventListener('click', addActivityLogEntry);
+      
+      // Import/Export buttons
+      document.getElementById('export-btn').addEventListener('click', exportData);
+      document.getElementById('import-btn').addEventListener('click', function() {
+        document.getElementById('file-input').click();
+      });
+      document.getElementById('file-input').addEventListener('change', importData);
+      
+      // Modal close button
+      document.querySelectorAll('.modal-close').forEach(btn => {
+        btn.addEventListener('click', closeModal);
+      });
+      
+      // Tab navigation
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.addEventListener('click', function() {
+          const tabId = this.getAttribute('data-tab');
+          showTab(tabId);
+        });
+      });
+      
+      // New tabbed interface
+      document.querySelectorAll('.tab-nav-item').forEach(item => {
+        item.addEventListener('click', function() {
+          // Remove active class from all tabs
+          document.querySelectorAll('.tab-nav-item').forEach(tab => tab.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+          
+          // Add active class to clicked tab
+          this.classList.add('active');
+          
+          // Show corresponding panel
+          const tabId = this.getAttribute('data-tab');
+          document.getElementById(tabId).classList.add('active');
+        });
+      });
+      
+      // PnL timeframe selector
+      document.querySelectorAll('.timeframe-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.timeframe-btn').forEach(b => b.classList.remove('active'));
+          this.classList.add('active');
+          STATE.settings.timeframe = this.getAttribute('data-timeframe');
+          updatePnLMetrics();
+          saveSettings();
+        });
+      });
+      
+      // PnL filter toggles
+      document.getElementById('show-overall').addEventListener('change', function() {
+        STATE.settings.showFilters.overall = this.checked;
+        updatePnLMetrics();
+        saveSettings();
+      });
+      
+      document.getElementById('show-fees').addEventListener('change', function() {
+        STATE.settings.showFilters.fees = this.checked;
+        updatePnLMetrics();
+        saveSettings();
+      });
+      
+      document.getElementById('show-asset-value').addEventListener('change', function() {
+        STATE.settings.showFilters.assetValue = this.checked;
+        updatePnLMetrics();
+        saveSettings();
+      });
+      
+      // Optimization goal change
+      document.getElementById('optimization-goal').addEventListener('change', function() {
+        const targetTokenContainer = document.getElementById('target-token-container');
+        if (this.value === 'max_specific_token') {
+          targetTokenContainer.style.display = 'block';
+          updateTargetTokenOptions();
+        } else {
+          targetTokenContainer.style.display = 'none';
+        }
+      });
+      
+      // Price inputs for ratio calculation
+      document.getElementById('token-a-price').addEventListener('input', updatePriceRatio);
+      document.getElementById('token-b-price').addEventListener('input', updatePriceRatio);
+      
+      // Swap token selection change
+      document.getElementById('swap-from-token').addEventListener('change', function() {
+        const toTokenSelect = document.getElementById('swap-to-token');
+        if (this.value === 'tokenA') {
+          toTokenSelect.value = 'tokenB';
+        } else {
+          toTokenSelect.value = 'tokenA';
+        }
+      });
+      
+      document.getElementById('swap-to-token').addEventListener('change', function() {
+        const fromTokenSelect = document.getElementById('swap-from-token');
+        if (this.value === 'tokenA') {
+          fromTokenSelect.value = 'tokenB';
+        } else {
+          fromTokenSelect.value = 'tokenA';
+        }
+      });
+    }
+    
+    // Update price ratio display
+    function updatePriceRatio() {
+      const tokenAPrice = parseFloat(document.getElementById('token-a-price').value) || 0;
+      const tokenBPrice = parseFloat(document.getElementById('token-b-price').value) || 0;
+      
+      if (tokenAPrice > 0 && tokenBPrice > 0) {
+        const priceRatio = tokenAPrice / tokenBPrice;
+        document.getElementById('price-ratio-display').value = `${priceRatio.toFixed(6)} (${document.getElementById('token-a').value}/${document.getElementById('token-b').value})`;
+      } else {
+        document.getElementById('price-ratio-display').value = 'Please enter both prices';
+      }
+    }
+    
+    // Show clear data confirmation modal
+    function showClearDataConfirmation() {
+      document.getElementById('confirm-clear-modal').style.display = 'flex';
+    }
+    
+    // Clear all data from localStorage
+    function clearAllData() {
+      // Clear data
+      STATE.positions = [];
+      STATE.currentPositionIndex = -1;
+      
+      // Reset settings to defaults
+      STATE.settings = {
+        timeframe: '1d',
+        showFilters: {
+          overall: true,
+          fees: true,
+          assetValue: true
+        }
+      };
+      
+      // Save empty state to localStorage
+      saveToLocalStorage();
+      saveSettings();
+      
+      // Update UI
+      updatePositionList();
+      updateGlobalMetrics();
+      updateTokenExposureTable();
+      updatePnLMetrics();
+      updateOptimizer();
+      
+      // Hide position details and results
+      document.getElementById('position-details-card').style.display = 'none';
+      document.getElementById('results-container').style.display = 'none';
+      
+      // Close modal
+      document.getElementById('confirm-clear-modal').style.display = 'none';
+      
+      alert('All data has been cleared successfully.');
+    }
+    
+    // Delete selected position
+    function deletePosition() {
+      if (STATE.currentPositionIndex < 0) {
+        alert('No position selected to delete.');
+        return;
+      }
+      
+      if (!confirm('Are you sure you want to delete this position? This action cannot be undone.')) {
+        return;
+      }
+      
+      // Remove position from array
+      STATE.positions.splice(STATE.currentPositionIndex, 1);
+      
+      // Reset current position index if necessary
+      if (STATE.positions.length === 0) {
+        STATE.currentPositionIndex = -1;
+      } else if (STATE.currentPositionIndex >= STATE.positions.length) {
+        STATE.currentPositionIndex = STATE.positions.length - 1;
+      }
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Update UI
+      updatePositionList();
+      updateGlobalMetrics();
+      updateTokenExposureTable();
+      updatePnLMetrics();
+      updateOptimizer();
+      
+      // Hide or update position details
+      if (STATE.currentPositionIndex === -1) {
+        document.getElementById('position-details-card').style.display = 'none';
+        document.getElementById('results-container').style.display = 'none';
+      } else {
+        loadPositionDetails();
+      }
+      
+      alert('Position deleted successfully.');
+    }
+    
+    // Save fee claim transaction
+    function saveFeesClaim() {
+      const position = STATE.getCurrentPosition();
+      if (!position) {
+        alert('No position selected.');
+        return;
+      }
+      
+      const date = document.getElementById('claim-date').value || new Date().toISOString().split('T')[0];
+      const amountA = parseFloat(document.getElementById('claim-amount-a').value) || 0;
+      const amountB = parseFloat(document.getElementById('claim-amount-b').value) || 0;
+      
+      if (amountA <= 0 && amountB <= 0) {
+        alert('Please enter a valid amount to claim for at least one token.');
+        return;
+      }
+      
+      // Check if amounts exceed unclaimed fees
+      if (amountA > position.accumulatedFeesA) {
+        alert(`Cannot claim more Token A than available (${position.accumulatedFeesA} available).`);
+        return;
+      }
+      
+      if (amountB > position.accumulatedFeesB) {
+        alert(`Cannot claim more Token B than available (${position.accumulatedFeesB} available).`);
+        return;
+      }
+      
+      // Calculate USD value
+      const value = (amountA * position.tokenAPrice) + (amountB * position.tokenBPrice);
+      
+      // Initialize transactionData array if it doesn't exist
+      if (!position.transactionData) {
+        position.transactionData = [];
+      }
+      
+      // Add to transaction log
+      position.transactionData.push({
+        date: date,
+        type: 'claim',
+        tokenA: position.tokenA,
+        tokenB: position.tokenB,
+        amountA: amountA,
+        amountB: amountB,
+        value: value,
+        priceA: position.tokenAPrice,
+        priceB: position.tokenBPrice
+      });
+      
+      // Reduce unclaimed fees
+      position.accumulatedFeesA -= amountA;
+      position.accumulatedFeesB -= amountB;
+      
+      // Add to activity log
+      if (!position.activityLog) {
+        position.activityLog = [];
+      }
+      
+      position.activityLog.push({
+        date: date,
+        action: 'claim',
+        notes: `Claimed ${amountA.toFixed(6)} ${position.tokenA} and ${amountB.toFixed(6)} ${position.tokenB} worth $${value.toFixed(2)}`
+      });
+      
+      // Sort by date (newest first)
+      position.transactionData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      position.activityLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Update fee log display
+      displayTransactionLog();
+      displayActivityLog();
+      
+      // Clear input fields
+      document.getElementById('claim-amount-a').value = '';
+      document.getElementById('claim-amount-b').value = '';
+      
+      // Update the unclaimed fees display in the Add/Update tab
+      document.getElementById('accumulated-fees-a').value = position.accumulatedFeesA;
+      document.getElementById('accumulated-fees-b').value = position.accumulatedFeesB;
+      
+      // Update global metrics
+      updateGlobalMetrics();
+      updatePnLMetrics();
+      
+      // Show success message
+      alert('Fee claim recorded successfully!');
+    }
+    
+    // Save fee compound transaction
+    function saveFeesCompound() {
+      const position = STATE.getCurrentPosition();
+      if (!position) {
+        alert('No position selected.');
+        return;
+      }
+      
+      const date = document.getElementById('compound-date').value || new Date().toISOString().split('T')[0];
+      const amountA = parseFloat(document.getElementById('compound-amount-a').value) || 0;
+      const amountB = parseFloat(document.getElementById('compound-amount-b').value) || 0;
+      
+      if (amountA <= 0 && amountB <= 0) {
+        alert('Please enter a valid amount to compound for at least one token.');
+        return;
+      }
+      
+      // Check if amounts exceed unclaimed fees
+      if (amountA > position.accumulatedFeesA) {
+        alert(`Cannot compound more Token A than available (${position.accumulatedFeesA} available).`);
+        return;
+      }
+      
+      if (amountB > position.accumulatedFeesB) {
+        alert(`Cannot compound more Token B than available (${position.accumulatedFeesB} available).`);
+        return;
+      }
+      
+      // Calculate USD value
+      const value = (amountA * position.tokenAPrice) + (amountB * position.tokenBPrice);
+      
+      // Initialize transactionData array if it doesn't exist
+      if (!position.transactionData) {
+        position.transactionData = [];
+      }
+      
+      // Add to transaction log
+      position.transactionData.push({
+        date: date,
+        type: 'compound',
+        tokenA: position.tokenA,
+        tokenB: position.tokenB,
+        amountA: amountA,
+        amountB: amountB,
+        value: value,
+        priceA: position.tokenAPrice,
+        priceB: position.tokenBPrice
+      });
+      
+      // Reduce unclaimed fees and add to LP
+      position.accumulatedFeesA -= amountA;
+      position.accumulatedFeesB -= amountB;
+      position.tokenA_LP += amountA;
+      position.tokenB_LP += amountB;
+      
+      // Add to activity log
+      if (!position.activityLog) {
+        position.activityLog = [];
+      }
+      
+      position.activityLog.push({
+        date: date,
+        action: 'compound',
+        notes: `Compounded ${amountA.toFixed(6)} ${position.tokenA} and ${amountB.toFixed(6)} ${position.tokenB} worth $${value.toFixed(2)} back into LP`
+      });
+      
+      // Sort by date (newest first)
+      position.transactionData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      position.activityLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Update displays
+      displayTransactionLog();
+      displayActivityLog();
+      
+      // Clear input fields
+      document.getElementById('compound-amount-a').value = '';
+      document.getElementById('compound-amount-b').value = '';
+      
+      // Update form fields
+      document.getElementById('accumulated-fees-a').value = position.accumulatedFeesA;
+      document.getElementById('accumulated-fees-b').value = position.accumulatedFeesB;
+      document.getElementById('token-a-lp').value = position.tokenA_LP;
+      document.getElementById('token-b-lp').value = position.tokenB_LP;
+      
+      // Update global metrics
+      updateGlobalMetrics();
+      updatePnLMetrics();
+      
+      // Show success message
+      alert('Fees compounded successfully!');
+    }
+    
+    // Save fee swap transaction
+    function saveFeesSwap() {
+      const position = STATE.getCurrentPosition();
+      if (!position) {
+        alert('No position selected.');
+        return;
+      }
+      
+      const date = document.getElementById('swap-date').value || new Date().toISOString().split('T')[0];
+      const fromToken = document.getElementById('swap-from-token').value;
+      const toToken = document.getElementById('swap-to-token').value;
+      const amount = parseFloat(document.getElementById('swap-amount').value) || 0;
+      const receivedAmount = parseFloat(document.getElementById('swap-received-amount').value) || 0;
+      
+      if (amount <= 0 || receivedAmount <= 0) {
+        alert('Please enter valid amounts for the swap.');
+        return;
+      }
+      
+      // Determine which token is being swapped
+      let fromTokenSymbol, toTokenSymbol;
+      let fromTokenPrice, toTokenPrice;
+      
+      if (fromToken === 'tokenA') {
+        fromTokenSymbol = position.tokenA;
+        toTokenSymbol = position.tokenB;
+        fromTokenPrice = position.tokenAPrice;
+        toTokenPrice = position.tokenBPrice;
+        
+        // Check if amount exceeds unclaimed fees
+        if (amount > position.accumulatedFeesA) {
+          alert(`Cannot swap more ${fromTokenSymbol} than available (${position.accumulatedFeesA} available).`);
+          return;
+        }
+      } else {
+        fromTokenSymbol = position.tokenB;
+        toTokenSymbol = position.tokenA;
+        fromTokenPrice = position.tokenBPrice;
+        toTokenPrice = position.tokenAPrice;
+        
+        // Check if amount exceeds unclaimed fees
+        if (amount > position.accumulatedFeesB) {
+          alert(`Cannot swap more ${fromTokenSymbol} than available (${position.accumulatedFeesB} available).`);
+          return;
+        }
+      }
+      
+      // Calculate USD values
+      const valueFrom = amount * fromTokenPrice;
+      const valueTo = receivedAmount * toTokenPrice;
+      
+      // Initialize transactionData array if it doesn't exist
+      if (!position.transactionData) {
+        position.transactionData = [];
+      }
+      
+      // Add to transaction log
+      position.transactionData.push({
+        date: date,
+        type: 'swap',
+        fromToken: fromTokenSymbol,
+        toToken: toTokenSymbol,
+        fromAmount: amount,
+        toAmount: receivedAmount,
+        valueFrom: valueFrom,
+        valueTo: valueTo,
+        fromPrice: fromTokenPrice,
+        toPrice: toTokenPrice
+      });
+      
+      // Update token balances
+      if (fromToken === 'tokenA') {
+        position.accumulatedFeesA -= amount;
+        position.accumulatedFeesB += receivedAmount;
+      } else {
+        position.accumulatedFeesB -= amount;
+        position.accumulatedFeesA += receivedAmount;
+      }
+      
+      // Add to activity log
+      if (!position.activityLog) {
+        position.activityLog = [];
+      }
+      
+      position.activityLog.push({
+        date: date,
+        action: 'swap',
+        notes: `Swapped ${amount.toFixed(6)} ${fromTokenSymbol} for ${receivedAmount.toFixed(6)} ${toTokenSymbol}`
+      });
+      
+      // Sort by date (newest first)
+      position.transactionData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      position.activityLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Update displays
+      displayTransactionLog();
+      displayActivityLog();
+      
+      // Clear input fields
+      document.getElementById('swap-amount').value = '';
+      document.getElementById('swap-received-amount').value = '';
+      
+      // Update form fields
+      document.getElementById('accumulated-fees-a').value = position.accumulatedFeesA;
+      document.getElementById('accumulated-fees-b').value = position.accumulatedFeesB;
+      
+      // Update global metrics
+      updateGlobalMetrics();
+      updatePnLMetrics();
+      
+      // Show success message
+      alert('Fee swap recorded successfully!');
+    }
+    
+    // Load all data from localStorage
+    function loadFromLocalStorage() {
+      try {
+        // Load positions
+        const savedPositions = localStorage.getItem('lpPortfolio');
+        if (savedPositions) {
+          STATE.positions = JSON.parse(savedPositions);
+          
+          // Ensure all positions have 'closed' property
+          STATE.positions.forEach(position => {
+            if (position.closed === undefined) {
+              position.closed = false;
+            }
+            if (position.closedDate === undefined) {
+              position.closedDate = null;
+            }
+          });
+          
+          // Set default current position to first active position if available
+          const activePositionIndex = STATE.positions.findIndex(position => !position.closed);
+          if (activePositionIndex >= 0) {
+            STATE.currentPositionIndex = activePositionIndex;
+          } else if (STATE.positions.length > 0) {
+            STATE.currentPositionIndex = 0;
+          }
+        }
+        
+        // Load settings
+        const savedSettings = localStorage.getItem('lpSettings');
+        if (savedSettings) {
+          const settings = JSON.parse(savedSettings);
+          STATE.settings = { ...STATE.settings, ...settings };
+          
+          // Set active timeframe button
+          document.querySelectorAll('.timeframe-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.getAttribute('data-timeframe') === STATE.settings.timeframe) {
+              btn.classList.add('active');
+            }
+          });
+          
+          // Set filter checkboxes
+          document.getElementById('show-overall').checked = STATE.settings.showFilters.overall;
+          document.getElementById('show-fees').checked = STATE.settings.showFilters.fees;
+          document.getElementById('show-asset-value').checked = STATE.settings.showFilters.assetValue;
+        }
+        
+        console.log('Data loaded from local storage successfully.');
+      } catch (error) {
+        console.error('Error loading data from localStorage:', error);
+      }
+    }
+    
+    // Save settings to localStorage
+    function saveSettings() {
+      try {
+        localStorage.setItem('lpSettings', JSON.stringify(STATE.settings));
+      } catch (error) {
+        console.error('Error saving settings to localStorage:', error);
+      }
+    }
+    
+    // Save all positions to localStorage
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem('lpPortfolio', JSON.stringify(STATE.positions));
+        console.log('Positions saved to local storage successfully.');
+      } catch (error) {
+        console.error('Error saving positions to localStorage:', error);
+      }
+    }
+    
+    // Export data to a JSON file
+    function exportData() {
+      try {
+        // Create export object with all data
+        const exportObj = {
+          positions: STATE.positions,
+          settings: STATE.settings
+        };
+        
+        // Convert to JSON string
+        const jsonStr = JSON.stringify(exportObj, null, 2);
+        
+        // Create blob and download link
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Create download link
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lp-portfolio-${new Date().toISOString().split('T')[0]}.json`;
+        
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+        
+        // Clean up
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert('Data exported successfully!');
+      } catch (error) {
+        console.error('Error exporting data:', error);
+        alert('Error exporting data. Please try again.');
+      }
+    }
+    
+    // Import data from a JSON file
+    function importData() {
+      try {
+        const fileInput = document.getElementById('file-input');
+        const file = fileInput.files[0];
+        
+        if (!file) {
+          alert('Please select a file to import.');
+          return;
+        }
+        
+        const reader = new FileReader();
+        
+        reader.onload = function(event) {
+          try {
+            const jsonData = JSON.parse(event.target.result);
+            
+            // Update state with imported data
+            if (jsonData.positions) {
+              STATE.positions = jsonData.positions;
+              
+              // Ensure all positions have 'closed' property
+              STATE.positions.forEach(position => {
+                if (position.closed === undefined) {
+                  position.closed = false;
+                }
+                if (position.closedDate === undefined) {
+                  position.closedDate = null;
+                }
+              });
+              
+              // Set default current position to first active position if available
+              const activePositionIndex = STATE.positions.findIndex(position => !position.closed);
+              if (activePositionIndex >= 0) {
+                STATE.currentPositionIndex = activePositionIndex;
+              } else if (STATE.positions.length > 0) {
+                STATE.currentPositionIndex = 0;
+              } else {
+                STATE.currentPositionIndex = -1;
+              }
+              
+              // Save to localStorage
+              saveToLocalStorage();
+            }
+            
+            // Import settings if available
+            if (jsonData.settings) {
+              STATE.settings = { ...STATE.settings, ...jsonData.settings };
+              saveSettings();
+              
+              // Set active timeframe button
+              document.querySelectorAll('.timeframe-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-timeframe') === STATE.settings.timeframe) {
+                  btn.classList.add('active');
+                }
+              });
+              
+              // Set filter checkboxes
+              document.getElementById('show-overall').checked = STATE.settings.showFilters.overall;
+              document.getElementById('show-fees').checked = STATE.settings.showFilters.fees;
+              document.getElementById('show-asset-value').checked = STATE.settings.showFilters.assetValue;
+            }
+            
+            // Update UI
+            updatePositionList();
+            updateGlobalMetrics();
+            updateTokenExposureTable();
+            updatePnLMetrics();
+            updateOptimizer();
+            
+            if (STATE.currentPositionIndex !== -1) {
+              loadPositionDetails();
+              document.getElementById('position-details-card').style.display = 'block';
+            } else {
+              document.getElementById('position-details-card').style.display = 'none';
+              document.getElementById('results-container').style.display = 'none';
+            }
+            
+            alert('Data imported successfully!');
+            // Continuing from where the file was cut off - in the importData() function's error handling
+          } catch (parseError) {
+            console.error('Error parsing import file:', parseError);
+            alert('Error parsing import file. Please ensure it is a valid JSON file.');
+          }
+        };
+        
+        reader.onerror = function() {
+          alert('Error reading the file. Please try again.');
+        };
+        
+        reader.readAsText(file);
+        
+        // Reset file input
+        fileInput.value = '';
+      } catch (error) {
+        console.error('Error importing data:', error);
+        alert('Error importing data. Please try again.');
+      }
+    }
+    
+    // Close any open modal
+    function closeModal() {
+      document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+      });
+    }
+    
+    // Show tab content
+    function showTab(tabId) {
+      // Hide all tab content
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Remove active class from all buttons
+      document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+      });
+      
+      // Show selected tab content
+      document.getElementById(tabId).classList.add('active');
+      
+      // Add active class to clicked button
+      document.querySelector(`.tab-button[data-tab="${tabId}"]`).classList.add('active');
+    }
+    
+    // Add a new position
+    function addNewPosition() {
+      // Clear form
+      document.getElementById('position-name').value = '';
+      document.getElementById('position-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('token-a').value = 'JUP';
+      document.getElementById('token-b').value = 'USDC';
+      document.getElementById('token-a-price').value = '2.50';
+      document.getElementById('token-b-price').value = '1.00';
+      document.getElementById('lower-ratio').value = '2.00';
+      document.getElementById('upper-ratio').value = '3.00';
+      document.getElementById('token-a-lp').value = '100';
+      document.getElementById('token-b-lp').value = '250';
+      document.getElementById('token-a-reserve').value = '25';
+      document.getElementById('token-b-reserve').value = '75';
+      document.getElementById('fee-apr').value = '0.5';
+      document.getElementById('accumulated-fees-a').value = '0.5';
+      document.getElementById('accumulated-fees-b').value = '2.25';
+      document.getElementById('position-status').value = 'in_range';
+      
+      // Update price ratio display
+      updatePriceRatio();
+      
+      // Set current position to -1 (new position)
+      STATE.currentPositionIndex = -1;
+      
+      // Update header
+      document.getElementById('current-position-name').textContent = 'New Position';
+      
+      // Show form
+      document.getElementById('position-details-card').style.display = 'block';
+      document.getElementById('results-container').style.display = 'none';
+      
+      // Ensure first tab is active
+      document.querySelector('.tab-nav-item[data-tab="add-update-tab"]').click();
+      
+      // Clear transaction log and activity log
+      document.getElementById('fee-log').innerHTML = '<p>No transactions yet.</p>';
+      document.getElementById('history-table').innerHTML = '<tr><td colspan="3">No history yet.</td></tr>';
+    }
+    
+    // Save current position details
+    function saveCurrentPosition() {
+      // Get values from form
+      const name = document.getElementById('position-name').value;
+      const date = document.getElementById('position-date').value;
+      const tokenA = document.getElementById('token-a').value;
+      const tokenB = document.getElementById('token-b').value;
+      const tokenAPrice = parseFloat(document.getElementById('token-a-price').value);
+      const tokenBPrice = parseFloat(document.getElementById('token-b-price').value);
+      const lowerRatio = parseFloat(document.getElementById('lower-ratio').value);
+      const upperRatio = parseFloat(document.getElementById('upper-ratio').value);
+      const tokenA_LP = parseFloat(document.getElementById('token-a-lp').value);
+      const tokenB_LP = parseFloat(document.getElementById('token-b-lp').value);
+      const tokenA_Reserve = parseFloat(document.getElementById('token-a-reserve').value);
+      const tokenB_Reserve = parseFloat(document.getElementById('token-b-reserve').value);
+      const feeAPRDaily = parseFloat(document.getElementById('fee-apr').value);
+      const accumulatedFeesA = parseFloat(document.getElementById('accumulated-fees-a').value);
+      const accumulatedFeesB = parseFloat(document.getElementById('accumulated-fees-b').value);
+      const status = document.getElementById('position-status').value;
+      
+      // Validate inputs
+      if (!name || !date || !tokenA || !tokenB) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+      
+      if (isNaN(tokenAPrice) || isNaN(tokenBPrice) || isNaN(lowerRatio) || isNaN(upperRatio)) {
+        alert('Please enter valid numeric values for prices and ratio bounds.');
+        return;
+      }
+      
+      if (lowerRatio >= upperRatio) {
+        alert('Upper bound must be greater than lower bound.');
+        return;
+      }
+      
+      if (isNaN(tokenA_LP) || isNaN(tokenB_LP) || isNaN(tokenA_Reserve) || isNaN(tokenB_Reserve)) {
+        alert('Please enter valid token amounts.');
+        return;
+      }
+      
+      // Create position object
+      const position = {
+        name,
+        date,
+        tokenA,
+        tokenB,
+        tokenAPrice,
+        tokenBPrice,
+        lowerRatio,
+        upperRatio,
+        tokenA_LP,
+        tokenB_LP,
+        tokenA_Reserve,
+        tokenB_Reserve,
+        feeAPRDaily,
+        accumulatedFeesA,
+        accumulatedFeesB,
+        status,
+        closed: false,
+        closedDate: null
+      };
+      
+      // Calculate current price ratio
+      const currentRatio = tokenAPrice / tokenBPrice;
+      position.currentRatio = currentRatio;
+      
+      // Initialize arrays if needed
+      if (!position.positionData) {
+        position.positionData = [];
+      }
+      
+      if (!position.transactionData) {
+        position.transactionData = [];
+      }
+      
+      if (!position.activityLog) {
+        position.activityLog = [];
+      }
+      
+      // Add entry to position data
+      const lpPositionValue = (tokenA_LP * tokenAPrice) + (tokenB_LP * tokenBPrice);
+      const reserveValue = (tokenA_Reserve * tokenAPrice) + (tokenB_Reserve * tokenBPrice);
+      const totalValue = lpPositionValue + reserveValue;
+      
+      position.positionData.push({
+        date: date,
+        lpPositionValue,
+        reserveValue,
+        totalValue,
+        tokenA_LP,
+        tokenB_LP,
+        tokenA_Reserve,
+        tokenB_Reserve,
+        tokenAPrice,
+        tokenBPrice,
+        currentRatio,
+        status
+      });
+      
+      // If new position, add it to the array and set it as current
+      if (STATE.currentPositionIndex === -1) {
+        // Add to activity log
+        position.activityLog.push({
+          date: date,
+          action: 'create',
+          notes: `Created new LP position: ${name}`
+        });
+        
+        STATE.positions.push(position);
+        STATE.currentPositionIndex = STATE.positions.length - 1;
+      } else {
+        // Update existing position
+        const existingPosition = STATE.positions[STATE.currentPositionIndex];
+        
+        // Add to activity log if significant values changed
+        if (tokenA_LP !== existingPosition.tokenA_LP || tokenB_LP !== existingPosition.tokenB_LP ||
+            lowerRatio !== existingPosition.lowerRatio || upperRatio !== existingPosition.upperRatio) {
+          position.activityLog.push({
+            date: date,
+            action: 'update',
+            notes: `Updated position: ${name}`
+          });
+        }
+        
+        // Preserve existing arrays
+        position.positionData = existingPosition.positionData.concat(position.positionData);
+        position.transactionData = existingPosition.transactionData || [];
+        position.activityLog = existingPosition.activityLog.concat(position.activityLog);
+        
+        // Replace existing position
+        STATE.positions[STATE.currentPositionIndex] = position;
+      }
+      
+      // Sort the arrays by date
+      position.positionData.sort((a, b) => new Date(b.date) - new Date(a.date));
+      position.activityLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Update UI
+      updatePositionList();
+      updateGlobalMetrics();
+      updateTokenExposureTable();
+      updatePnLMetrics();
+      updateOptimizer();
+      
+      // Update position name in header
+      document.getElementById('current-position-name').textContent = name;
+      
+      // Load position details to display fee log and activity log
+      displayTransactionLog();
+      displayActivityLog();
+      
+      // Check for optimal strategy
+      calculateStrategy();
+      
+      alert('Position saved successfully!');
+    }
+    
+    // Update position list display
+    function updatePositionList() {
+      const positionList = document.getElementById('position-list');
+      positionList.innerHTML = '';
+      
+      if (STATE.positions.length === 0) {
+        positionList.innerHTML = '<p>No positions added yet. Add your first position using the button below.</p>';
+        return;
+      }
+      
+      // Filter out closed positions for main display
+      const activePositions = STATE.positions.filter(position => !position.closed);
+      
+      if (activePositions.length === 0) {
+        positionList.innerHTML = '<p>No active positions. All positions are closed. View closed positions history or add a new position.</p>';
+        return;
+      }
+      
+      // Create position items
+      activePositions.forEach((position, index) => {
+        // Find the actual index in the full positions array
+        const fullIndex = STATE.positions.findIndex(p => p.name === position.name);
+        
+        const item = document.createElement('div');
+        item.className = 'position-item';
+        
+        if (fullIndex === STATE.currentPositionIndex) {
+          item.classList.add('active');
+        }
+        
+        // Determine status indicator class
+        let statusClass = '';
+        switch (position.status) {
+          case 'in_range':
+            statusClass = 'status-in-range';
+            break;
+          case 'near_boundary':
+            statusClass = 'status-warning';
+            break;
+          case 'out_range_recent':
+          case 'out_range_extended':
+            statusClass = 'status-out-of-range';
+            break;
+        }
+        
+        // Calculate LP value
+        const lpValue = (position.tokenA_LP * position.tokenAPrice) + (position.tokenB_LP * position.tokenBPrice);
+        
+        item.innerHTML = `
+          <div class="position-status ${statusClass}"></div>
+          <div class="position-name">${position.name}</div>
+          <div class="position-value">$${lpValue.toFixed(2)}</div>
+        `;
+        
+        item.addEventListener('click', function() {
+          // Remove active class from all position items
+          document.querySelectorAll('.position-item').forEach(p => p.classList.remove('active'));
+          
+          // Add active class to clicked item
+          item.classList.add('active');
+          
+          // Set current position index and load details
+          STATE.currentPositionIndex = fullIndex;
+          loadPositionDetails();
+          
+          // Show position details card
+          document.getElementById('position-details-card').style.display = 'block';
+        });
+        
+        positionList.appendChild(item);
+      });
+    }
+    
+    // Load selected position details into form
+    function loadPositionDetails() {
+      const position = STATE.getCurrentPosition();
+      if (!position) {
+        return;
+      }
+      
+      // Update position name in header
+      document.getElementById('current-position-name').textContent = position.name;
+      
+      // Fill form fields
+      document.getElementById('position-name').value = position.name;
+      document.getElementById('position-date').value = new Date().toISOString().split('T')[0]; // Set to today for updates
+      document.getElementById('token-a').value = position.tokenA;
+      document.getElementById('token-b').value = position.tokenB;
+      document.getElementById('token-a-price').value = position.tokenAPrice;
+      document.getElementById('token-b-price').value = position.tokenBPrice;
+      document.getElementById('lower-ratio').value = position.lowerRatio;
+      document.getElementById('upper-ratio').value = position.upperRatio;
+      document.getElementById('token-a-lp').value = position.tokenA_LP;
+      document.getElementById('token-b-lp').value = position.tokenB_LP;
+      document.getElementById('token-a-reserve').value = position.tokenA_Reserve;
+      document.getElementById('token-b-reserve').value = position.tokenB_Reserve;
+      document.getElementById('fee-apr').value = position.feeAPRDaily;
+      document.getElementById('accumulated-fees-a').value = position.accumulatedFeesA;
+      document.getElementById('accumulated-fees-b').value = position.accumulatedFeesB;
+      document.getElementById('position-status').value = position.status;
+      
+      // Update price ratio display
+      updatePriceRatio();
+      
+      // Display transaction log and activity log
+      displayTransactionLog();
+      displayActivityLog();
+      
+      // Generate optimal strategy
+      calculateStrategy();
+    }
+    
+    // Display fee transaction log
+    function displayTransactionLog() {
+      const position = STATE.getCurrentPosition();
+      const feeLog = document.getElementById('fee-log');
+      
+      if (!position || !position.transactionData || position.transactionData.length === 0) {
+        feeLog.innerHTML = '<p>No transactions yet.</p>';
+        return;
+      }
+      
+      feeLog.innerHTML = '';
+      
+      position.transactionData.forEach(tx => {
+        const entry = document.createElement('div');
+        entry.className = 'fee-log-entry';
+        
+        // Format date
+        const dateObj = new Date(tx.date);
+        const formattedDate = dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        
+        // Generate transaction details based on type
+        let details = '';
+        
+        switch (tx.type) {
+          case 'claim':
+            details = `
+              <div class="fee-date">${formattedDate} - Claimed Fees</div>
+              <div class="fee-details">
+                <span>${tx.amountA.toFixed(6)} ${tx.tokenA} + ${tx.amountB.toFixed(6)} ${tx.tokenB}</span>
+                <span>$${tx.value.toFixed(2)}</span>
+              </div>
+            `;
+            break;
+            
+          case 'compound':
+            details = `
+              <div class="fee-date">${formattedDate} - Compounded Fees</div>
+              <div class="fee-details">
+                <span>${tx.amountA.toFixed(6)} ${tx.tokenA} + ${tx.amountB.toFixed(6)} ${tx.tokenB}</span>
+                <span>$${tx.value.toFixed(2)}</span>
+              </div>
+            `;
+            break;
+            
+          case 'swap':
+            details = `
+              <div class="fee-date">${formattedDate} - Swapped Fees</div>
+              <div class="fee-details">
+                <span>${tx.fromAmount.toFixed(6)} ${tx.fromToken} → ${tx.toAmount.toFixed(6)} ${tx.toToken}</span>
+                <span>$${tx.valueFrom.toFixed(2)} → $${tx.valueTo.toFixed(2)}</span>
+              </div>
+            `;
+            break;
+        }
+        
+        entry.innerHTML = details;
+        feeLog.appendChild(entry);
+      });
+    }
+    
+    // Display activity log for history tab
+    function displayActivityLog() {
+      const position = STATE.getCurrentPosition();
+      const historyTable = document.getElementById('history-table');
+      
+      if (!position || !position.activityLog || position.activityLog.length === 0) {
+        historyTable.innerHTML = '<tr><td colspan="3">No history yet.</td></tr>';
+        return;
+      }
+      
+      historyTable.innerHTML = '';
+      
+      position.activityLog.forEach(entry => {
+        const row = document.createElement('tr');
+        
+        // Format date
+        const dateObj = new Date(entry.date);
+        const formattedDate = dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+        
+        // Format action
+        let actionText = '';
+        switch (entry.action) {
+          case 'create':
+            actionText = 'Created Position';
+            break;
+          case 'update':
+            actionText = 'Updated Position';
+            break;
+          case 'add':
+            actionText = 'Added Liquidity';
+            break;
+          case 'remove':
+            actionText = 'Removed Liquidity';
+            break;
+          case 'rebalance':
+            actionText = 'Rebalanced Position';
+            break;
+          case 'adjust_range':
+            actionText = 'Adjusted Range';
+            break;
+          case 'claim':
+            actionText = 'Claimed Fees';
+            break;
+          case 'compound':
+            actionText = 'Compounded Fees';
+            break;
+          case 'swap':
+            actionText = 'Swapped Fees';
+            break;
+          default:
+            actionText = entry.action;
+        }
+        
+        row.innerHTML = `
+          <td>${formattedDate}</td>
+          <td>${actionText}</td>
+          <td>${entry.notes}</td>
+        `;
+        
+        historyTable.appendChild(row);
+      });
+    }
+    
+    // Add new activity log entry
+    function addActivityLogEntry() {
+      const position = STATE.getCurrentPosition();
+      if (!position) {
+        alert('No position selected.');
+        return;
+      }
+      
+      const date = document.getElementById('history-date').value;
+      const action = document.getElementById('history-action').value;
+      const notes = document.getElementById('history-notes').value;
+      
+      if (!date || !notes) {
+        alert('Please fill in all required fields.');
+        return;
+      }
+      
+      // Initialize activityLog if it doesn't exist
+      if (!position.activityLog) {
+        position.activityLog = [];
+      }
+      
+      // Create new entry
+      const entry = {
+        date: date,
+        action: action,
+        notes: notes
+      };
+      
+      // Add to array
+      position.activityLog.push(entry);
+      
+      // Sort by date (newest first)
+      position.activityLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Update display
+      displayActivityLog();
+      
+      // Clear input fields
+      document.getElementById('history-notes').value = '';
+      
+      alert('History entry added successfully!');
+    }
+    
+    // Close a position
+    function closePosition() {
+      if (STATE.currentPositionIndex < 0) {
+        alert('No position selected to close.');
+        return;
+      }
+      
+      if (!confirm('Are you sure you want to mark this position as closed? This will move it to the closed positions history.')) {
+        return;
+      }
+      
+      const position = STATE.getCurrentPosition();
+      position.closed = true;
+      position.closedDate = new Date().toISOString().split('T')[0];
+      
+      // Add to activity log
+      if (!position.activityLog) {
+        position.activityLog = [];
+      }
+      
+      position.activityLog.push({
+        date: position.closedDate,
+        action: 'close',
+        notes: `Closed position: ${position.name}`
+      });
+      
+      // Sort activity log
+      position.activityLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+      
+      // Save to localStorage
+      saveToLocalStorage();
+      
+      // Find next active position
+      const activeIndex = STATE.positions.findIndex(p => !p.closed);
+      if (activeIndex >= 0) {
+        STATE.currentPositionIndex = activeIndex;
+        loadPositionDetails();
+      } else {
+        STATE.currentPositionIndex = -1;
+        document.getElementById('position-details-card').style.display = 'none';
+        document.getElementById('results-container').style.display = 'none';
+      }
+      
+      // Update UI
+      updatePositionList();
+      updateGlobalMetrics();
+      updateTokenExposureTable();
+      updatePnLMetrics();
+      updateOptimizer();
+      
+      alert('Position closed successfully.');
+    }
+    
+    // Show closed positions history
+    function showClosedPositionsHistory() {
+      const modal = document.getElementById('closed-positions-modal');
+      const closedPositionsList = document.getElementById('closed-positions-list');
+      
+      // Filter closed positions
+      const closedPositions = STATE.positions.filter(position => position.closed);
+      
+      if (closedPositions.length === 0) {
+        closedPositionsList.innerHTML = '<p>No closed positions yet.</p>';
+      } else {
+        closedPositionsList.innerHTML = '';
+        
+        // Create table
+        const table = document.createElement('table');
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>Position Name</th>
+              <th>Tokens</th>
+              <th>Final Value</th>
+              <th>Closed Date</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+        
+        // Add rows for each closed position
+        closedPositions.forEach((position, index) => {
+          const row = document.createElement('tr');
+          
+          // Find the actual index in the full positions array
+          const fullIndex = STATE.positions.findIndex(p => p.name === position.name);
+          
+          // Calculate final position value
+          const finalValue = (position.tokenA_LP * position.tokenAPrice) + (position.tokenB_LP * position.tokenBPrice);
+          
+          row.innerHTML = `
+            <td>${position.name}</td>
+            <td>${position.tokenA}/${position.tokenB}</td>
+            <td>$${finalValue.toFixed(2)}</td>
+            <td>${position.closedDate || 'N/A'}</td>
+            <td><button class="reopen-btn" data-index="${fullIndex}">Reopen</button></td>
+          `;
+          
+          table.querySelector('tbody').appendChild(row);
+        });
+        
+        closedPositionsList.appendChild(table);
+        
+        // Add event listeners to reopen buttons
+        table.querySelectorAll('.reopen-btn').forEach(btn => {
+          btn.addEventListener('click', function() {
+            const index = parseInt(this.getAttribute('data-index'));
+            reopenPosition(index);
+          });
+        });
+      }
+      
+      // Show modal
+      modal.style.display = 'flex';
+    }
+    
+    // Reopen a closed position
+    function reopenPosition(index) {
+      if (index >= 0 && index < STATE.positions.length) {
+        const position = STATE.positions[index];
+        
+        if (!position.closed) {
+          alert('This position is already active.');
+          return;
+        }
+        
+        position.closed = false;
+        position.closedDate = null;
+        
+        // Add to activity log
+        if (!position.activityLog) {
+          position.activityLog = [];
+        }
+        
+        position.activityLog.push({
+          date: new Date().toISOString().split('T')[0],
+          action: 'reopen',
+          notes: `Reopened position: ${position.name}`
+        });
+        
+        // Sort activity log
+        position.activityLog.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        // Set as current position
+        STATE.currentPositionIndex = index;
+        
+        // Save to localStorage
+        saveToLocalStorage();
+        
+        // Update UI
+        updatePositionList();
+        updateGlobalMetrics();
+        updateTokenExposureTable();
+        updatePnLMetrics();
+        updateOptimizer();
+        loadPositionDetails();
+        
+        // Show position details
+        document.getElementById('position-details-card').style.display = 'block';
+        
+        // Close the modal
+        document.getElementById('closed-positions-modal').style.display = 'none';
+        
+        alert('Position reopened successfully.');
+      }
+    }
+    
+    // Update global metrics
+    function updateGlobalMetrics() {
+      const portfolioValues = STATE.calculatePortfolioValue();
+      
+      // Update global metrics display
+      document.getElementById('total-lp-value').textContent = `$${portfolioValues.totalLPValue.toFixed(2)}`;
+      document.getElementById('total-reserve-value').textContent = `$${portfolioValues.totalReserveValue.toFixed(2)}`;
+      document.getElementById('total-fees-value').textContent = `$${portfolioValues.totalFeesValue.toFixed(2)}`;
+      document.getElementById('daily-earnings').textContent = `$${portfolioValues.totalDailyEarnings.toFixed(2)}`;
+    }
+    
+    // Update token exposure table
+    function updateTokenExposureTable() {
+      const tokenTable = document.getElementById('token-exposure-table').querySelector('tbody');
+      tokenTable.innerHTML = '';
+      
+      // Get all tokens in portfolio
+      const tokens = STATE.getAllTokens();
+      
+      // Calculate total portfolio value
+      const portfolioValues = STATE.calculatePortfolioValue();
+      const totalPortfolioValue = portfolioValues.totalLPValue + portfolioValues.totalReserveValue + portfolioValues.totalFeesValue;
+      
+      if (tokens.length === 0 || totalPortfolioValue === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = '<td colspan="5">No active positions or tokens in portfolio.</td>';
+        tokenTable.appendChild(row);
+        return;
+      }
+      
+      // Sort tokens by total value (highest first)
+      tokens.sort((a, b) => b.totalValue - a.totalValue);
+      
+      tokens.forEach(token => {
+        const row = document.createElement('tr');
+        
+        // Calculate values
+        const lpValue = token.lpAmount * token.price;
+        const reserveValue = token.reserveAmount * token.price;
+        const portfolioPercentage = (token.totalValue / totalPortfolioValue * 100).toFixed(2);
+        
+        row.innerHTML = `
+          <td>${token.symbol}</td>
+          <td>$${token.totalValue.toFixed(2)}</td>
+          <td>${portfolioPercentage}%</td>
+          <td>$${lpValue.toFixed(2)}</td>
+          <td>$${reserveValue.toFixed(2)}</td>
+        `;
+        
+        tokenTable.appendChild(row);
+      });
+    }
+    
+    // Update PnL metrics
+    function updatePnLMetrics() {
+      const timeframe = STATE.settings.timeframe;
+      const pnlData = STATE.calculatePnL(timeframe);
+      
+      // Update PnL metrics
+      const overallPnlElement = document.getElementById('overall-pnl');
+      const feesEarnedElement = document.getElementById('fees-earned');
+      const assetValueChangeElement = document.getElementById('asset-value-change');
+      const initialValueElement = document.getElementById('initial-value');
+      
+      // Format numbers
+      const formattedPnLPercent = pnlData.overallPnLPercent >= 0 
+          ? `+${pnlData.overallPnLPercent.toFixed(2)}%` 
+          : `${pnlData.overallPnLPercent.toFixed(2)}%`;
+          
+      const formattedAssetChangePercent = pnlData.assetValueChangePercent >= 0 
+          ? `+${pnlData.assetValueChangePercent.toFixed(2)}%` 
+          : `${pnlData.assetValueChangePercent.toFixed(2)}%`;
+      
+      // Update text content
+      overallPnlElement.textContent = `$${pnlData.overallPnL.toFixed(2)} (${formattedPnLPercent})`;
+      feesEarnedElement.textContent = `$${pnlData.feesEarned.toFixed(2)}`;
+      assetValueChangeElement.textContent = `$${pnlData.assetValueChange.toFixed(2)} (${formattedAssetChangePercent})`;
+      initialValueElement.textContent = `$${pnlData.initialValue.toFixed(2)}`;
+      
+      // Add appropriate CSS classes based on values
+      if (pnlData.overallPnL > 0) {
+        overallPnlElement.className = 'pnl-value positive';
+      } else if (pnlData.overallPnL < 0) {
+        overallPnlElement.className = 'pnl-value negative';
+      } else {
+        overallPnlElement.className = 'pnl-value';
+      }
+      
+      if (pnlData.assetValueChange > 0) {
+        assetValueChangeElement.className = 'pnl-value positive';
+      } else if (pnlData.assetValueChange < 0) {
+        assetValueChangeElement.className = 'pnl-value negative';
+      } else {
+        assetValueChangeElement.className = 'pnl-value';
+      }
+      
+      // TODO: Add chart rendering code here for PnL chart
+    }
+    
+    // Generate optimal strategy for a position
+    function calculateStrategy() {
+      const position = STATE.getCurrentPosition();
+      if (!position) {
+        return;
+      }
+      
+      // Calculate values
+      const tokenA_LP_Value = position.tokenA_LP * position.tokenAPrice;
+      const tokenB_LP_Value = position.tokenB_LP * position.tokenBPrice;
+      const lpPositionValue = tokenA_LP_Value + tokenB_LP_Value;
+      
+      const tokenA_Reserve_Value = position.tokenA_Reserve * position.tokenAPrice;
+      const tokenB_Reserve_Value = position.tokenB_Reserve * position.tokenBPrice;
+      const reserveValue = tokenA_Reserve_Value + tokenB_Reserve_Value;
+      
+      const feesA_Value = position.accumulatedFeesA * position.tokenAPrice;
+      const feesB_Value = position.accumulatedFeesB * position.tokenBPrice;
+      const feesValue = feesA_Value + feesB_Value;
+      
+      const totalValue = lpPositionValue + reserveValue + feesValue;
+      
+      // Calculate token ratio in LP
+      const tokenARatio = tokenA_LP_Value / lpPositionValue * 100;
+      const tokenBRatio = tokenB_LP_Value / lpPositionValue * 100;
+      
+      // Calculate fees APR annualized
+      const feeAPRAnnualized = position.feeAPRDaily * 365;
+      
+      // Calculate price position in range
+      const currentRatio = position.tokenAPrice / position.tokenBPrice;
+      const rangePosition = (currentRatio - position.lowerRatio) / (position.upperRatio - position.lowerRatio);
+      
+      // Show results container
+      document.getElementById('results-container').style.display = 'block';
+      
+      // Update metrics display
+      document.getElementById('lp-value-metric').textContent = `$${lpPositionValue.toFixed(2)}`;
+      document.getElementById('fee-apr-metric').textContent = `${feeAPRAnnualized.toFixed(2)}%`;
+      document.getElementById('token-ratio-metric').textContent = `${tokenARatio.toFixed(0)}:${tokenBRatio.toFixed(0)}`;
+      document.getElementById('unclaimed-fees-metric').textContent = `$${feesValue.toFixed(2)}`;
+      
+      // Update range indicator
+      const rangeBar = document.getElementById('range-bar');
+      const priceMarker = document.getElementById('price-marker');
+      
+      // Set range bar width as percentage of container
+      rangeBar.style.width = '100%';
+      
+      // Set price marker position
+      if (rangePosition < 0) {
+        // Price is below lower bound
+        priceMarker.style.left = '0%';
+      } else if (rangePosition > 1) {
+        // Price is above upper bound
+        priceMarker.style.left = '100%';
+      } else {
+        // Price is within range
+        priceMarker.style.left = `${rangePosition * 100}%`;
+      }
+      
+      // Generate recommended actions based on analysis
+      const actionsList = document.getElementById('actions-list');
+      actionsList.innerHTML = '';
+      
+      // Generate actions based on position status and analysis
+      const actions = [];
+      
+      // Check if in range or out of range
+      if (position.status === 'out_range_recent' || position.status === 'out_range_extended') {
+        // Out of range action
+        actions.push({
+          type: 'warning',
+          title: 'Position is Out of Range',
+          description: `Your position is currently out of range with price ratio ${currentRatio.toFixed(4)}, which is ${currentRatio < position.lowerRatio ? 'below' : 'above'} your configured range (${position.lowerRatio.toFixed(4)} - ${position.upperRatio.toFixed(4)}).`,
+          recommendation: 'Consider adjusting your position range or waiting for price to return to range. While out of range, you are not earning trading fees.'
+        });
+        
+        // Adjust range recommendation
+        actions.push({
+          type: 'adjust_range',
+          title: 'Adjust Position Range',
+          description: `Reconfigure your position with a new range centered around the current price ratio of ${currentRatio.toFixed(4)}.`,
+          recommendation: `Set new range: ${(currentRatio * 0.8).toFixed(4)} - ${(currentRatio * 1.2).toFixed(4)}`
+        });
+      } else if (position.status === 'near_boundary') {
+        // Near boundary action
+        actions.push({
+          type: 'warning',
+          title: 'Position Near Range Boundary',
+          description: `Your position is near the ${currentRatio < (position.lowerRatio + (position.upperRatio - position.lowerRatio) / 3) ? 'lower' : 'upper'} boundary of your configured range.`,
+          recommendation: 'Monitor closely as you may soon be out of range and stop earning fees if price continues to move in this direction.'
+        });
+      }
+      
+      // Check token ratio balance
+      if (Math.abs(tokenARatio - 50) > 15) {
+        // Unbalanced position action
+        const higherToken = tokenARatio > tokenBRatio ? position.tokenA : position.tokenB;
+        const lowerToken = tokenARatio > tokenBRatio ? position.tokenB : position.tokenA;
+        
+        actions.push({
+          type: 'rebalance',
+          title: 'Consider Rebalancing',
+          description: `Your position is currently weighted ${tokenARatio > tokenBRatio ? 'heavily towards ' + position.tokenA : 'heavily towards ' + position.tokenB} (${Math.max(tokenARatio, tokenBRatio).toFixed(0)}% vs ${Math.min(tokenARatio, tokenBRatio).toFixed(0)}%).`,
+          recommendation: `Consider rebalancing to improve capital efficiency. You may want to swap some ${higherToken} for ${lowerToken} to achieve better balance.`
+        });
+      }
+      
+      // Check unclaimed fees
+      if (feesValue > lpPositionValue * 0.02) {
+        // Significant unclaimed fees action
+        actions.push({
+          type: 'claim',
+          title: 'Consider Claiming Fees',
+          description: `You have accumulated $${feesValue.toFixed(2)} in unclaimed fees, which is ${(feesValue / lpPositionValue * 100).toFixed(1)}% of your position value.`,
+          recommendation: 'Consider claiming these fees to realize profits or compound them back into your position for increased future earnings.'
+        });
+      }
+      
+      // Display actions
+      if (actions.length === 0) {
+        // No actions needed
+        actions.push({
+          type: 'success',
+          title: 'Position Optimally Configured',
+          description: 'Your position is currently well-configured and earning fees effectively.',
+          recommendation: 'Continue monitoring the position and consider compounding fees back into the position periodically to maximize returns.'
+        });
+      }
+      
+      // Render action items
+      actions.forEach(action => {
+        const actionItem = document.createElement('div');
+        actionItem.className = `action-item ${action.type}`;
+        
+        actionItem.innerHTML = `
+          <h4>${action.title}</h4>
+          <p>${action.description}</p>
+          <p><strong>Recommendation:</strong> ${action.recommendation}</p>
+        `;
+        
+        actionsList.appendChild(actionItem);
+      });
+      
+      // Populate LP composition table
+      const compositionTable = document.getElementById('composition-table');
+      compositionTable.innerHTML = '';
+      
+      // Add Token A row
+      const tokenARow = document.createElement('tr');
+      tokenARow.innerHTML = `
+        <td>${position.tokenA}</td>
+        <td>${position.tokenA_LP.toFixed(6)}</td>
+        <td>$${tokenA_LP_Value.toFixed(2)}</td>
+        <td>${tokenARatio.toFixed(2)}%</td>
+        <td>${position.tokenA_Reserve.toFixed(6)}</td>
+        <td>$${(tokenA_LP_Value + tokenA_Reserve_Value).toFixed(2)}</td>
+      `;
+      compositionTable.appendChild(tokenARow);
+      
+      // Add Token B row
+      const tokenBRow = document.createElement('tr');
+      tokenBRow.innerHTML = `
+        <td>${position.tokenB}</td>
+        <td>${position.tokenB_LP.toFixed(6)}</td>
+        <td>$${tokenB_LP_Value.toFixed(2)}</td>
+        <td>${tokenBRatio.toFixed(2)}%</td>
+        <td>${position.tokenB_Reserve.toFixed(6)}</td>
+        <td>$${(tokenB_LP_Value + tokenB_Reserve_Value).toFixed(2)}</td>
+      `;
+      compositionTable.appendChild(tokenBRow);
+      
+      // Populate metrics table
+      const metricsTable = document.getElementById('metrics-table');
+      metricsTable.innerHTML = '';
+      
+      // Add metrics rows
+      const metrics = [
+        {
+          name: 'LP Value',
+          value: `$${lpPositionValue.toFixed(2)}`,
+          status: 'neutral'
+        },
+        {
+          name: 'Reserve Tokens Value',
+          value: `$${reserveValue.toFixed(2)}`,
+          status: 'neutral'
+        },
+        {
+          name: 'Total Position Value',
+          value: `$${totalValue.toFixed(2)}`,
+          status: 'neutral'
+        },
+        {
+          name: 'Fee APR (Annualized)',
+          value: `${feeAPRAnnualized.toFixed(2)}%`,
+          status: feeAPRAnnualized > 15 ? 'positive' : (feeAPRAnnualized > 5 ? 'neutral' : 'negative')
+        },
+        {
+          name: 'Daily Fee Earnings',
+          value: `$${(lpPositionValue * position.feeAPRDaily / 100).toFixed(2)}`,
+          status: 'positive'
+        },
+        {
+          name: 'Range Status',
+          value: position.status === 'in_range' ? 'In Range' : (position.status === 'near_boundary' ? 'Near Boundary' : 'Out of Range'),
+          status: position.status === 'in_range' ? 'positive' : (position.status === 'near_boundary' ? 'warning' : 'negative')
+        },
+        {
+          name: 'Token Ratio Balance',
+          value: `${tokenARatio.toFixed(0)}:${tokenBRatio.toFixed(0)}`,
+          status: Math.abs(tokenARatio - 50) < 10 ? 'positive' : (Math.abs(tokenARatio - 50) < 20 ? 'warning' : 'negative')
+        },
+        {
+          name: 'Price vs Range',
+          value: `${(rangePosition * 100).toFixed(0)}% of range`,
+          status: rangePosition >= 0 && rangePosition <= 1 ? 'positive' : 'negative'
+        }
+      ];
+      
+      metrics.forEach(metric => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${metric.name}</td>
+          <td>${metric.value}</td>
+          <td><span class="${metric.status}">${metric.status === 'positive' ? '✓' : (metric.status === 'negative' ? '✗' : '⚠')}</span></td>
+        `;
+        metricsTable.appendChild(row);
+      });
+      
+      // TODO: Add chart rendering for position value history
+    }
+    
+    // Update target token options
+    function updateTargetTokenOptions() {
+      const targetTokenSelect = document.getElementById('target-token');
+      targetTokenSelect.innerHTML = '';
+      
+      // Get all tokens in portfolio
+      const tokens = STATE.getAllTokens();
+      
+      tokens.forEach(token => {
+        const option = document.createElement('option');
+        option.value = token.symbol;
+        option.textContent = token.symbol;
+        targetTokenSelect.appendChild(option);
+      });
+    }
+    
+    // Generate cross-position optimization strategies
+    function updateOptimizer() {
+      // Update target token options
+      updateTargetTokenOptions();
+      
+      // Check if optimization goal is set to accumulate specific token
+      const optimizationGoal = document.getElementById('optimization-goal').value;
+      if (optimizationGoal === 'max_specific_token') {
+        document.getElementById('target-token-container').style.display = 'block';
+      } else {
+        document.getElementById('target-token-container').style.display = 'none';
+      }
+      
+      // Calculate portfolio metrics
+      const portfolioValues = STATE.calculatePortfolioValue();
+      const activePositions = STATE.positions.filter(position => !position.closed);
+      
+      // Calculate overall risk rating
+      let riskRating = 'Moderate';
+      let outOfRangeCount = 0;
+      
+      activePositions.forEach(position => {
+        if (position.status.startsWith('out_range')) {
+          outOfRangeCount++;
+        }
+      });
+      
+      if (outOfRangeCount === 0) {
+        riskRating = 'Low';
+      } else if (outOfRangeCount / activePositions.length > 0.5) {
+        riskRating = 'High';
+      }
+      
+      // Calculate LP vs HODL
+      let lpVsHodl = 'Neutral';
+      // This would need historical data analysis to be accurate
+      
+      // Calculate portfolio balance
+      let portfolioBalance = 'Well-Balanced';
+      const tokens = STATE.getAllTokens();
+      
+      // Check if any token is more than 70% of portfolio
+      tokens.forEach(token => {
+        const portfolioPercentage = token.totalValue / (portfolioValues.totalLPValue + portfolioValues.totalReserveValue) * 100;
+        if (portfolioPercentage > 70) {
+          portfolioBalance = 'Concentrated';
+        }
+      });
+      
+      // Calculate projected monthly yield
+      const projectedMonthlyYield = portfolioValues.totalDailyEarnings * 30;
+      const projectedMonthlyYieldPercent = portfolioValues.totalLPValue > 0 ? 
+        (projectedMonthlyYield / portfolioValues.totalLPValue * 100) : 0;
+      
+      // Update metrics display
+      document.getElementById('overall-risk-metric').textContent = riskRating;
+      document.getElementById('overall-lp-vs-hodl-metric').textContent = lpVsHodl;
+      document.getElementById('portfolio-balance-metric').textContent = portfolioBalance;
+      document.getElementById('projected-monthly-yield').textContent = `$${projectedMonthlyYield.toFixed(2)} (${projectedMonthlyYieldPercent.toFixed(2)}%)`;
+    }
+    
+    // Generate cross-position optimization strategies
+    function optimizePortfolio() {
+      const optimizationGoal = document.getElementById('optimization-goal').value;
+      const riskTolerance = document.getElementById('risk-tolerance').value;
+      const targetToken = document.getElementById('target-token').value;
+      
+      // Get active positions
+      const activePositions = STATE.positions.filter(position => !position.closed);
+      
+      if (activePositions.length === 0) {
+        alert('You need at least one active position to optimize the portfolio.');
+        return;
+      }
+      
+      // Generate strategies based on optimization goal
+      const opportunitiesContainer = document.getElementById('cross-position-opportunities');
+      opportunitiesContainer.innerHTML = '<h3>Optimization Recommendations</h3>';
+      
+      // Calculate token exposure
+      const tokens = STATE.getAllTokens();
+      const portfolioValues = STATE.calculatePortfolioValue();
+      
+      // Generate token exposure recommendations
+      const tokenExposureItem = document.createElement('div');
+      tokenExposureItem.className = 'action-item cross-position';
+      
+      let tokenExposureContent = `
+        <h4>Portfolio Token Exposure</h4>
+        <p>Your portfolio currently has exposure to ${tokens.length} tokens:</p>
+        <ul>
+      `;
+      
+      tokens.forEach(token => {
+        const portfolioPercentage = token.totalValue / (portfolioValues.totalLPValue + portfolioValues.totalReserveValue) * 100;
+        tokenExposureContent += `<li>${token.symbol}: ${portfolioPercentage.toFixed(2)}% of portfolio</li>`;
+      });
+      
+      tokenExposureContent += '</ul>';
+      
+      // Add recommendations based on optimization goal
+      switch (optimizationGoal) {
+        case 'balanced':
+          tokenExposureContent += `
+            <p><strong>Recommendation:</strong> Aim for balanced exposure across tokens to minimize risk while maintaining good fee generation.</p>
+          `;
+          break;
+          
+        case 'max_fees':
+          tokenExposureContent += `
+            <p><strong>Recommendation:</strong> Focus on positions with highest fee APR. Consider widening ranges to capture more trading activity.</p>
+          `;
+          break;
+          
+        case 'min_il':
+          tokenExposureContent += `
+            <p><strong>Recommendation:</strong> Tighten position ranges around current prices to minimize impermanent loss risk. Consider more stable pairs.</p>
+          `;
+          break;
+          
+        case 'max_specific_token':
+          tokenExposureContent += `
+            <p><strong>Recommendation:</strong> Adjust positions to accumulate more ${targetToken} through fees and favorable price movements.</p>
+          `;
+          break;
+      }
+      
+      tokenExposureItem.innerHTML = tokenExposureContent;
+      opportunitiesContainer.appendChild(tokenExposureItem);
+      
+      // Range optimization recommendations
+      const rangeItem = document.createElement('div');
+      rangeItem.className = 'action-item cross-position';
+      
+      let rangeItemContent = `
+        <h4>Position Range Optimization</h4>
+        <p>Based on your ${riskTolerance} risk tolerance and current market conditions:</p>
+        <ul>
+      `;
+      
+      // Add position-specific recommendations
+      activePositions.forEach(position => {
+        const currentRatio = position.tokenAPrice / position.tokenBPrice;
+        
+        if (position.status.startsWith('out_range')) {
+          rangeItemContent += `<li><strong>${position.name}:</strong> Currently out of range. Adjust range to ${(currentRatio * 0.8).toFixed(4)} - ${(currentRatio * 1.2).toFixed(4)}</li>`;
+        } else if (position.status === 'near_boundary') {
+          rangeItemContent += `<li><strong>${position.name}:</strong> Near range boundary. Monitor closely or recenterer range around ${currentRatio.toFixed(4)}</li>`;
+        } else {
+          // Recommendations based on risk tolerance
+          switch (riskTolerance) {
+            case 'conservative':
+              rangeItemContent += `<li><strong>${position.name}:</strong> Maintain tight range: ${(currentRatio * 0.9).toFixed(4)} - ${(currentRatio * 1.1).toFixed(4)}</li>`;
+              break;
+              
+            case 'moderate':
+              rangeItemContent += `<li><strong>${position.name}:</strong> Current range appropriate: ${position.lowerRatio.toFixed(4)} - ${position.upperRatio.toFixed(4)}</li>`;
+              break;
+              
+            case 'aggressive':
+              rangeItemContent += `<li><strong>${position.name}:</strong> Consider wider range for higher fee capture: ${(currentRatio * 0.7).toFixed(4)} - ${(currentRatio * 1.3).toFixed(4)}</li>`;
+              break;
+          }
+        }
+      });
+      
+      rangeItemContent += '</ul>';
+      rangeItem.innerHTML = rangeItemContent;
+      opportunitiesContainer.appendChild(rangeItem);
+      
+      // Fee optimization recommendations
+      const feeItem = document.createElement('div');
+      feeItem.className = 'action-item cross-position';
+      
+      let feeItemContent = `
+        <h4>Fee Strategy Optimization</h4>
+        <p>Current unclaimed fee value: $${portfolioValues.totalFeesValue.toFixed(2)}</p>
+      `;
+      
+      // Add recommendations based on optimization goal
+      switch (optimizationGoal) {
+        case 'balanced':
+          feeItemContent += `
+            <p><strong>Recommendation:</strong> Compound 50% of fees back into positions and claim 50% to reduce exposure risk.</p>
+          `;
+          break;
+          
+        case 'max_fees':
+          feeItemContent += `
+            <p><strong>Recommendation:</strong> Compound 100% of fees back into positions to maximize compounding effect and increase fee generation capacity.</p>
+          `;
+          break;
+          
+        case 'min_il':
+          feeItemContent += `
+            <p><strong>Recommendation:</strong> Claim 100% of fees to wallet to reduce exposure to potential impermanent loss.</p>
+          `;
+          break;
+          
+        case 'max_specific_token':
+          feeItemContent += `
+            <p><strong>Recommendation:</strong> Swap all fee tokens to ${targetToken} and either compound back to positions or hold in reserve based on your strategy.</p>
+          `;
+          break;
+      }
+      
+      feeItem.innerHTML = feeItemContent;
+      opportunitiesContainer.appendChild(feeItem);
+      
+      // Rebalancing recommendations
+      const rebalanceItem = document.createElement('div');
+      rebalanceItem.className = 'action-item cross-position';
+      
+      let rebalanceItemContent = `
+        <h4>Portfolio Rebalancing Opportunities</h4>
+        <p>Based on your optimization goal and current position status:</p>
+      `;
+      
+      // Add position-specific rebalancing recommendations
+      if (activePositions.some(p => Math.abs((p.tokenA_LP * p.tokenAPrice) / ((p.tokenA_LP * p.tokenAPrice) + (p.tokenB_LP * p.tokenBPrice)) - 0.5) > 0.15)) {
+        rebalanceItemContent += `
+          <p><strong>Opportunity:</strong> Some positions have significant token imbalance. Consider rebalancing to improve capital efficiency.</p>
+          <ul>
+        `;
+        
+        activePositions.forEach(position => {
+          const tokenARatio = (position.tokenA_LP * position.tokenAPrice) / ((position.tokenA_LP * position.tokenAPrice) + (position.tokenB_LP * position.tokenBPrice));
+          
+          if (Math.abs(tokenARatio - 0.5) > 0.15) {
+            const higherToken = tokenARatio > 0.5 ? position.tokenA : position.tokenB;
+            const lowerToken = tokenARatio > 0.5 ? position.tokenB : position.tokenA;
+            
+            rebalanceItemContent += `<li><strong>${position.name}:</strong> Imbalanced at ${(tokenARatio * 100).toFixed(0)}:${((1 - tokenARatio) * 100).toFixed(0)}. Consider swapping some ${higherToken} for ${lowerToken}.</li>`;
+          }
+        });
+        
+        rebalanceItemContent += '</ul>';
+      } else {
+        rebalanceItemContent += `
+          <p><strong>Status:</strong> Your positions are generally well-balanced between token pairs.</p>
+        `;
+      }
+      
+      rebalanceItem.innerHTML = rebalanceItemContent;
+      opportunitiesContainer.appendChild(rebalanceItem);
+    }
+  </script>
+</body>
+</html>
